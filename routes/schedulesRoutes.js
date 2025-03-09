@@ -1,12 +1,9 @@
 import { Router } from "express";
 import {
-  getUserSchedules,
-  addNewSchedules,
-  deleteSchedule,
+  getAllSchedules,
+  createSchedule,
 } from "../controller/schedulesController.js";
 const router = Router();
 
-router.post("/", addNewSchedules);
-router.route("/:id").get(getUserSchedules).delete(deleteSchedule);
-
+router.route("/").get(getAllSchedules).post(createSchedule);
 export default router;

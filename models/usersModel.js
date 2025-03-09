@@ -2,6 +2,21 @@ import mongoose from "mongoose";
 
 const usersSchema = mongoose.Schema(
   {
+    firstname: {
+      type: String,
+      required: true,
+    },
+    middlename: {
+      type: String,
+      required: true,
+    },
+    lastname: {
+      type: String,
+      required: true,
+    },
+    suffix: {
+      type: String,
+    },
     username: {
       type: String,
       required: true,
@@ -34,11 +49,6 @@ const usersSchema = mongoose.Schema(
     email: {
       type: String,
       required: true,
-    },
-
-    busySchedules: {
-      type: [String], // Array of string URLs
-      default: [], // Default empty array
     },
   },
   {

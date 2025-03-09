@@ -5,6 +5,7 @@ import colleges from "./routes/collegesRoutes.js";
 import departments from "./routes/departmensRoutes.js";
 import users from "./routes/userRoutes.js";
 import schedules from "./routes/schedulesRoutes.js";
+import thesisDocumentRoutes from "./routes/thesisDocumentRoutes.js";
 import { userLogin } from "./controller/authController.js";
 connectDB();
 
@@ -19,6 +20,7 @@ app.use("/api/users", users);
 app.use("/api/colleges", colleges);
 app.use("/api/departments", departments);
 app.use("/api/schedules", schedules);
+app.use("/api/thesisDocuments", thesisDocumentRoutes);
 
 app.listen(port, () => {
   console.log(`running on port ${port}`);

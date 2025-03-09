@@ -1,39 +1,32 @@
-import schedules from "../models/schedule.js";
+import schedulesModel from "../models/schedulesModel.js";
 
-// get user schedule
-export async function getUserSchedules(req, res) {
-  const { id } = req.params;
-  const userSchedules = await schedules.find({ userId: id });
-
-  if (!userSchedules) {
-    return res.status(200).send({ error: "User not found" });
+// 🔹 Get all schedules
+export async function getAllSchedules(req, res) {
+  try {
+    const scheduleData = await schedulesModel.find();
+    return res.status(200).json(scheduleData);
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving schedules", error });
   }
-
-  return res.status(200).send(userSchedules);
 }
 
-// add new schedule
-export async function addNewSchedules(req, res) {
-  const { title, date, userId } = req.body;
+// 🔹 Create a new schedule
+export async function createSchedule(req, res) {
+  try {
+    const { date, time, eventType, userId } = req.body;
 
-  if (!title || !date || !userId) {
-    return res.status(400).send({ error: "Missing Fields" });
+    const newSchedule = new schedulesModel({
+      date,
+      time,
+      eventType,
+      userId,
+    });
+
+    await newSchedule.save();
+    res
+      .status(201)
+      .json({ message: "Schedule created successfully", newSchedule });
+  } catch (error) {
+    res.status(500).json({ message: "Error creating schedule", error });
   }
-  const newSchedule = await schedules.create(req.body);
-
-  return res.status(200).send(newSchedule);
-}
-
-// delete schedule
-export async function deleteSchedule(req, res) {
-  const { id } = req.params;
-
-  const schedule = await schedules.findById(id);
-
-  if (!schedule) {
-    return res.status(400).send({ error: "Schedule not found" });
-  }
-  const deletedSchedule = await schedules.findByIdAndDelete(id);
-
-  return res.status(200).send(deletedSchedule);
 }
