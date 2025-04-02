@@ -4,11 +4,7 @@ import bcrypt from "bcryptjs";
 // get all users
 
 export async function getUsers(req, res) {
-  const users = await usersModel
-    .find()
-    .populate("collegeId")
-    .populate("departmentId");
-
+  const users = await usersModel.find().populate("departmentId");
   return res.status(200).send(users);
 }
 
@@ -28,7 +24,10 @@ export async function addUser(req, res) {
     password: hashedPassword,
   });
 
-  return res.status(200).send(newUser);
+  return res.status(200).send({
+    message: `User added successfully`,
+    data: newUser,
+  });
 }
 
 // delete user
@@ -43,7 +42,9 @@ export async function deleteUser(req, res) {
 
   const deletedUserData = await usersModel.findByIdAndDelete(id);
 
-  return res.status(200).send(deletedUserData);
+  return res
+    .status(200)
+    .send({ message: "User deleted successfully", data: deletedUserData });
 }
 
 // update user details
@@ -51,15 +52,6 @@ export async function updateUser(req, res) {
   try {
     const { id } = req.params;
     let updates = req.body;
-
-    // If a password is provided and is not an empty string, hash it
-    if (updates.password && updates.password.trim() !== "") {
-      const saltRounds = 10;
-      updates.password = await bcrypt.hash(updates.password, saltRounds);
-    } else {
-      // Remove password from updates to keep the existing one
-      delete updates.password;
-    }
 
     const updatedUser = await usersModel.findByIdAndUpdate(
       id,
@@ -72,6 +64,36 @@ export async function updateUser(req, res) {
     }
 
     res.status(200).json({ message: "User updated successfully", updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+export async function getStudents(req, res) {
+  try {
+    const students = await usersModel.find({ userType: "student" });
+
+    res.status(200).json(students);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+export async function getfaculty(req, res) {
+  try {
+    const faculty = await usersModel.find({ userType: "faculty" });
+
+    res.status(200).json(faculty);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
+export async function getChairpersons(req, res) {
+  try {
+    const chairpersons = await usersModel.find({ userType: "chairperson" });
+
+    res.status(200).json(chairpersons);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

@@ -6,6 +6,16 @@ const thesisDocumentsSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    ratingCount: {
+      type: Number,
+      default: 0,
+    },
+
+    venue: {
+      type: String,
+      required: true,
+    },
     students: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -13,13 +23,12 @@ const thesisDocumentsSchema = new mongoose.Schema(
         required: true,
       },
     ],
-    advisers: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "users", // Reference to users (advisers)
-        required: true,
-      },
-    ],
+    adviser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users", // Reference to users (advisers)
+      required: true,
+    },
+
     panels: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -39,7 +48,7 @@ const thesisDocumentsSchema = new mongoose.Schema(
           enum: ["pending", "approved", "rejected"],
           default: "pending",
         },
-        reamarks: {
+        remarks: {
           type: String,
           default: "pending",
         },
@@ -55,7 +64,7 @@ const thesisDocumentsSchema = new mongoose.Schema(
       enum: ["proposal", "final"],
       required: true,
     },
-    document: {
+    documentLink: {
       type: String, // Store file path or URL
     },
     schedule: {

@@ -36,11 +36,6 @@ const usersSchema = mongoose.Schema(
       ref: "departments", // Reference to the Department collection
       required: true,
     },
-    collegeId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "colleges", // Reference to the Department collection
-      required: true,
-    },
 
     userType: {
       type: String,
@@ -49,6 +44,9 @@ const usersSchema = mongoose.Schema(
     email: {
       type: String,
       required: true,
+    },
+    profilePicture: {
+      type: String,
     },
   },
   {

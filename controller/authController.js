@@ -6,7 +6,9 @@ import bcrypt from "bcryptjs";
 export async function userLogin(req, res) {
   const { username, password } = req.body;
 
-  const user = await usersModel.findOne({ username: username });
+  const user = await usersModel
+    .findOne({ username: username })
+    .populate("departmentId");
 
   if (!user) {
     return res.status(200).json({ error: "User doesnt exist!" });
@@ -16,7 +18,14 @@ export async function userLogin(req, res) {
   if (user && isCorrectPassword) {
     return res.status(200).json({
       id: user._id,
-      name: user.name,
+      firstname: user.firstname,
+      middlename: user.middlename,
+      lastname: user.lastname,
+      email: user.email,
+      userType: user.userType,
+      suffix: user.suffix,
+      departmentAcronym: user.departmentId.acronym,
+      departmentName: user.departmentId.name,
       id_number: user.id_number,
       token: generateToken(user._id),
     });
@@ -26,7 +35,5 @@ export async function userLogin(req, res) {
 }
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: "5h", // Example expiration
-  });
+  return jwt.sign({ id }, process.env.JWT_SECRET);
 };
