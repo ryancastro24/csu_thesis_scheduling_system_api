@@ -19,17 +19,22 @@ export async function getUsers(req, res) {
 
 // add new user
 export async function addUser(req, res) {
-  const { password } = req.body;
   try {
-    const userExist = await usersModel.findOne({ username: req.body.username });
-    const emailExist = await usersModel.findOne({ email: req.body.email });
+    const { username, email, password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: "Password is required" });
+    }
+
+    const userExist = await usersModel.findOne({ username });
+    const emailExist = await usersModel.findOne({ email });
 
     if (userExist) {
-      return res.status(400).send({ error: "Username already exists!" });
+      return res.status(400).json({ error: "Username already exists!" });
     }
 
     if (emailExist) {
-      return res.status(400).send({ error: "Email already exists!" });
+      return res.status(400).json({ error: "Email already exists!" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -40,8 +45,8 @@ export async function addUser(req, res) {
       password: hashedPassword,
     });
 
-    return res.status(201).send({
-      message: `User added successfully`,
+    return res.status(201).json({
+      message: "User added successfully",
       userId: newUser._id,
     });
   } catch (error) {
