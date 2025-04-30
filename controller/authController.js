@@ -16,6 +16,13 @@ export async function userLogin(req, res) {
   const isCorrectPassword = await bcrypt.compare(password, user.password);
 
   if (user && isCorrectPassword) {
+    if (!user.approved) {
+      return res.status(200).json({
+        error:
+          "Account not yet approved, an email will be received if approved",
+      });
+    }
+
     return res.status(200).json({
       id: user._id,
       firstname: user.firstname,
@@ -26,6 +33,7 @@ export async function userLogin(req, res) {
       suffix: user.suffix,
       departmentAcronym: user.departmentId.acronym,
       departmentName: user.departmentId.name,
+      profilePicture: user.profilePicture,
       id_number: user.id_number,
       token: generateToken(user._id),
     });

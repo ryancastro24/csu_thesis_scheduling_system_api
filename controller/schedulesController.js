@@ -30,122 +30,131 @@ export async function createSchedule(req, res) {
     res.status(500).json({ message: "Error creating schedule", error });
   }
 }
-
 export const generateSchedule = async (req, res) => {
   try {
     const {
       dateRange,
-      startTime,
-      endTime,
       panel1,
       panel2,
       panel3,
+      panel4,
       chairperson,
-      eventType, // Added eventType from request
+      eventType,
     } = req.body;
+
     const adminId = new mongoose.Types.ObjectId("67d1534860798a27a35b0cc9");
 
-    if (
-      !dateRange ||
-      !startTime ||
-      !endTime ||
-      !panel1 ||
-      !panel2 ||
-      !panel3 ||
-      !chairperson
-    ) {
+    if (!dateRange || !panel1 || !panel2 || !panel3 || !chairperson) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Convert startTime and endTime to 24-hour format
-    const startTime24 = convertTo24Hour(startTime);
-    const endTime24 = convertTo24Hour(endTime);
+    // Default working hours (excluding lunch)
+    const defaultTimeRanges = [
+      { start: "08:00", end: "11:00" },
+      { start: "13:00", end: "17:00" },
+    ];
 
-    // Validate time range (must be between 9:00 AM and 6:00 PM)
-    if (startTime24 < "09:00") {
-      return res.status(200).json({
-        message:
-          "Starting time is too early. The schedule must start at 9:00 AM or later.",
-      });
-    }
-    if (endTime24 > "18:00") {
-      return res.status(200).json({
-        message: "End time exceeded. The schedule must end by 6:00 PM.",
-      });
-    }
+    const userIds = [panel1, panel2, panel3, panel4, chairperson, adminId];
 
-    // Determine which schedules to fetch
-    const userIds =
-      eventType === "Thesis"
-        ? [panel1, panel2, panel3, chairperson, adminId]
-        : [adminId];
-
-    // Fetch all schedules for the relevant users
     const allSchedules = await schedulesModel.find({
       userId: { $in: userIds },
     });
 
-    // Parse date range
     const [startDate, endDate] = dateRange
       .split(" - ")
       .map((date) => new Date(date.trim()));
 
-    // Generate all dates within the range
     const availableDates = [];
     let currentDate = new Date(startDate);
-
     while (currentDate <= endDate) {
-      availableDates.push(currentDate.toISOString().split("T")[0]); // Format YYYY-MM-DD
+      // Check if the current date is a weekday (Monday to Friday)
+      const dayOfWeek = currentDate.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        // 0 = Sunday, 6 = Saturday
+        availableDates.push(currentDate.toISOString().split("T")[0]);
+      }
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // Find booked dates where the startTime is within 30 minutes of an existing schedule's time range
-    const bookedDates = new Set();
-
-    allSchedules.forEach((schedule) => {
-      const [scheduleStart, scheduleEnd] = schedule.time
-        .split(" - ")
-        .map((time) => time.trim());
-
-      // Convert times to Date objects for comparison
-      const scheduleStartTime = new Date(
-        `1970-01-01T${convertTo24Hour(scheduleStart)}:00Z`
-      );
-      const scheduleEndTime = new Date(
-        `1970-01-01T${convertTo24Hour(scheduleEnd)}:00Z`
-      );
-      const requestedStartTime = new Date(`1970-01-01T${startTime24}:00Z`);
-
-      // Check if requestedStartTime is within 30 minutes of the scheduleStartTime
-      const thirtyMinutesLater = new Date(
-        scheduleStartTime.getTime() + 30 * 60000
-      );
-
-      if (
-        requestedStartTime >= scheduleStartTime &&
-        requestedStartTime < thirtyMinutesLater
-      ) {
-        bookedDates.add(schedule.date);
+    // Group schedules by date for faster lookup
+    const schedulesByDate = {};
+    allSchedules.forEach((sched) => {
+      if (!schedulesByDate[sched.date]) {
+        schedulesByDate[sched.date] = [];
+      }
+      if (sched.time) {
+        const [start, end] = sched.time.split(" - ").map((t) => t.trim());
+        schedulesByDate[sched.date].push({
+          start: convertTo24Hour(start),
+          end: convertTo24Hour(end),
+        });
       }
     });
 
-    // Filter available dates
-    const freeDates = availableDates.filter((date) => !bookedDates.has(date));
+    const generateTimeSlots = (rangeStart, rangeEnd) => {
+      const slots = [];
+      let current = new Date(`1970-01-01T${rangeStart}:00Z`);
+      const end = new Date(`1970-01-01T${rangeEnd}:00Z`);
+      while (new Date(current.getTime() + 2 * 60 * 60 * 1000) <= end) {
+        const endSlot = new Date(current.getTime() + 2 * 60 * 60 * 1000);
+        slots.push({
+          start: current.toISOString().substring(11, 16),
+          end: endSlot.toISOString().substring(11, 16),
+        });
+        current = new Date(current.getTime() + 30 * 60 * 1000); // move 30 mins for more possibilities
+      }
+      return slots;
+    };
 
-    if (freeDates.length === 0) {
-      return res.status(200).json({
-        message: `No available dates found for ${startTime} - ${endTime}.`,
+    const finalSlots = [];
+
+    for (const date of availableDates) {
+      let booked = schedulesByDate[date] || [];
+
+      defaultTimeRanges.forEach(({ start, end }) => {
+        const timeSlots = generateTimeSlots(start, end);
+
+        timeSlots.forEach((slot) => {
+          const slotStart = new Date(`1970-01-01T${slot.start}:00Z`);
+          const slotEnd = new Date(`1970-01-01T${slot.end}:00Z`);
+
+          const overlaps = booked.some((b) => {
+            const bookedStart = new Date(`1970-01-01T${b.start}:00Z`);
+            const bookedEnd = new Date(`1970-01-01T${b.end}:00Z`);
+            return slotStart < bookedEnd && slotEnd > bookedStart;
+          });
+
+          if (!overlaps) {
+            finalSlots.push({
+              date,
+              time: `${formatTo12Hour(slot.start)} - ${formatTo12Hour(
+                slot.end
+              )}`,
+            });
+          }
+        });
       });
     }
 
-    return res.status(200).json({ message: `Available Date: ${freeDates[0]}` });
+    if (finalSlots.length === 0) {
+      return res.status(200).json({
+        message: `No available time slots found.`,
+      });
+    }
+
+    return res.status(200).json({ data: finalSlots });
   } catch (error) {
     console.error("Error generating schedule:", error);
     return res.status(500).json({ message: "Server error", error });
   }
 };
-
-// Helper function to convert 12-hour time format to 24-hour format
+function formatTo12Hour(time24) {
+  const [hour, minute] = time24.split(":").map(Number);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minute.toString().padStart(2, "0")}${ampm}`;
+}
+// Converts 12-hour format to 24-hour
 function convertTo24Hour(time) {
   let [hours, minutes] = time.match(/\d+/g);
   const period = time.match(/AM|PM/i);
@@ -189,5 +198,73 @@ export async function deleteUserSchedule(req, res) {
     });
   } catch (error) {
     res.status(500).json({ message: "Error deleting schedule", error });
+  }
+}
+export async function verifyScheduleConflict(req, res) {
+  const { date, time, panel1, panel2, panel3, panel4 } = req.body;
+  const panelIds = [panel1, panel2, panel3, panel4];
+
+  const [startTime, endTime] = time.split(" - ").map(convertTo24Hour);
+
+  try {
+    // Fetch all schedules for the specified panels
+    const conflictingSchedules = await schedulesModel.find({
+      date: date,
+      userId: { $in: panelIds },
+    });
+
+    // Check for conflicts based on the time and date
+    const conflicts = conflictingSchedules.some((sched) => {
+      const bookedStart = convertTo24Hour(sched.time.split(" - ")[0]);
+      const bookedEnd = convertTo24Hour(sched.time.split(" - ")[1]);
+      const isSameDate = sched.date === date; // Ensure the date matches
+      return (
+        isSameDate &&
+        ((startTime < bookedEnd && endTime > bookedStart) || // Overlap case
+          (startTime <= bookedStart && endTime >= bookedEnd)) // Full overlap case
+      );
+    });
+
+    if (conflicts) {
+      return res.status(200).json({
+        message: "Schedule conflict detected",
+      });
+    }
+
+    return res.status(200).json({ message: "No conflicts detected" });
+  } catch (error) {
+    console.log({ message: "Error verifying schedule", error });
+    res.status(500).json({ message: "Error verifying schedule", error });
+  }
+}
+
+export async function updateSchedule(req, res) {
+  const { id } = req.params; // Get schedule ID from request params
+  const { eventType, date, time } = req.body; // Get new event type, date, and time from request body
+
+  try {
+    // Ensure the ID is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid schedule ID" });
+    }
+
+    // Update only the eventType, date, and time fields
+    const updatedSchedule = await schedulesModel.findByIdAndUpdate(
+      id,
+      { eventType, date, time },
+      { new: true, fields: { eventType: 1, date: 1, time: 1 } } // Return only updated fields
+    );
+
+    if (!updatedSchedule) {
+      return res.status(404).json({ message: "Schedule not found" });
+    }
+
+    res.status(200).json({
+      message: "Schedule updated successfully",
+      data: updatedSchedule,
+    });
+  } catch (error) {
+    console.error("Error updating schedule:", error);
+    res.status(500).json({ message: "Error updating schedule", error });
   }
 }

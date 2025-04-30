@@ -41,12 +41,23 @@ const usersSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    approved: {
+      type: Boolean,
+      default: false,
+    },
+
     email: {
       type: String,
       required: true,
     },
     profilePicture: {
       type: String,
+    },
+    otp: {
+      type: Number,
+    },
+    otpExpiry: {
+      type: Date,
     },
   },
   {

@@ -4,7 +4,6 @@ const thesisDocumentsSchema = new mongoose.Schema(
   {
     thesisTitle: {
       type: String,
-      required: true,
     },
 
     ratingCount: {
@@ -14,26 +13,22 @@ const thesisDocumentsSchema = new mongoose.Schema(
 
     venue: {
       type: String,
-      required: true,
     },
     students: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users", // Reference to users (students)
-        required: true,
       },
     ],
     adviser: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users", // Reference to users (advisers)
-      required: true,
     },
 
     panels: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users", // Reference to users (panel members)
-        required: true,
       },
     ],
     panelApprovals: [
@@ -41,16 +36,14 @@ const thesisDocumentsSchema = new mongoose.Schema(
         panel: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "users", // Panel member ID
-          required: true,
         },
         status: {
           type: String,
-          enum: ["pending", "approved", "rejected"],
+          enum: ["pending", "approve", "reject"],
           default: "pending",
         },
         remarks: {
           type: String,
-          default: "pending",
         },
       },
     ],
@@ -62,7 +55,6 @@ const thesisDocumentsSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: ["proposal", "final"],
-      required: true,
     },
     documentLink: {
       type: String, // Store file path or URL
@@ -70,7 +62,27 @@ const thesisDocumentsSchema = new mongoose.Schema(
     schedule: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "schedules", // Reference to schedules collection
-      required: true,
+    },
+    reschedule: {
+      type: Boolean,
+      default: false, // Default value set to false
+    },
+
+    defended: {
+      type: Boolean,
+      default: false, // Default value set to false
+    },
+    forSchedule: {
+      type: Boolean,
+      default: false,
+    },
+
+    forScheduleStatus: {
+      type: String,
+      default: "idle",
+    },
+    approvalFile: {
+      type: String,
     },
   },
   {
@@ -87,14 +99,6 @@ thesisDocumentsSchema.pre("save", function (next) {
     const anyRejected = this.panelApprovals.some(
       (approval) => approval.status === "rejected"
     );
-
-    if (allApproved) {
-      this.status = "approved";
-    } else if (anyRejected) {
-      this.status = "rejected";
-    } else {
-      this.status = "pending";
-    }
   }
   next();
 });

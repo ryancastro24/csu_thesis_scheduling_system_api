@@ -3,10 +3,10 @@ import ThesisDocument from "../models/thesisModel.js";
 // Create a new favorite
 export async function createFavorite(req, res) {
   try {
-    const { userId, caseId } = req.body;
+    const { userId, thesisId } = req.body;
 
     // Check if favorite already exists
-    const existingFavorite = await Favorites.findOne({ userId, caseId });
+    const existingFavorite = await Favorites.findOne({ userId, thesisId });
     if (existingFavorite) {
       return res
         .status(400)
@@ -15,14 +15,14 @@ export async function createFavorite(req, res) {
 
     const favorite = new Favorites({
       userId,
-      caseId,
+      thesisId,
     });
 
     const savedFavorite = await favorite.save();
 
     // Increment ratingCount by 1
     await ThesisDocument.findByIdAndUpdate(
-      caseId,
+      thesisId,
       { $inc: { ratingCount: 1 } },
       { new: true }
     );
@@ -40,7 +40,7 @@ export async function getAllFavorites(req, res) {
     const favorites = await Favorites.find({ userId: id })
       .populate("userId")
       .populate({
-        path: "caseId",
+        path: "thesisId",
         model: ThesisDocument,
         populate: {
           path: "students", // Populate the students array of ids
@@ -59,17 +59,22 @@ export async function getAllFavorites(req, res) {
 // Delete a favorite
 export async function deleteFavorite(req, res) {
   try {
-    const { userId, caseId } = req.params;
+    const { userId, thesisId } = req.params;
 
-    // Find the favorite using userId and caseId
-    const favorite = await Favorites.findOne({ userId, caseId });
+    // Check if thesisId is defined
+    if (!thesisId) {
+      return res.status(400).json({ message: "thesisId is required" });
+    }
+
+    // Find the favorite using userId and thesisId
+    const favorite = await Favorites.findOne({ userId, thesisId });
     if (!favorite) {
       return res.status(404).json({ message: "Favorite not found" });
     }
 
-    // Decrement the case ratingCount by 1
+    // Decrement the thesis ratingCount by 1
     await ThesisDocument.findByIdAndUpdate(
-      caseId,
+      thesisId,
       { $inc: { ratingCount: -1 } },
       { new: true }
     );

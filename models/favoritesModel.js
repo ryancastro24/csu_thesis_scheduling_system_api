@@ -7,9 +7,9 @@ const favoritesSchema = mongoose.Schema(
       ref: "users", // Reference to the College collection
       required: true,
     },
-    caseId: {
+    thesisId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "cases", // Reference to the College collection
+      ref: "thesisDocuments", // Reference to the College collection
       required: true,
     },
   },

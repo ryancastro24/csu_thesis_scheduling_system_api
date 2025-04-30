@@ -8,6 +8,9 @@ import schedules from "./routes/schedulesRoutes.js";
 import thesisDocumentRoutes from "./routes/thesisDocumentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import favoriteRoutes from "./routes/favoritesRoutes.js";
+import notificationsRoutes from "./routes/notificationRoutes.js";
+import adviserAcceptanceRoutes from "./routes/adviserAcceptanceRoute.js";
+import panelApprovalRoutes from "./routes/panelApprovalRoutes.js";
 import cors from "cors";
 connectDB();
 
@@ -24,6 +27,9 @@ app.use("/api/departments", departments);
 app.use("/api/schedules", schedules);
 app.use("/api/thesisDocuments", thesisDocumentRoutes);
 app.use("/api/favorites", favoriteRoutes);
+app.use("/api/notifications", notificationsRoutes);
+app.use("/api/adviserAcceptance", adviserAcceptanceRoutes);
+app.use("/api/panelApproval", panelApprovalRoutes);
 app.listen(port, () => {
   console.log(`running on port ${port}`);
 });

@@ -1,20 +1,11 @@
 import { Router } from "express";
 import {
-  getUsers,
-  addUser,
-  deleteUser,
-  updateUser,
-  getStudents,
-  getfaculty,
-  approvedUser,
-  updateUserProfile,
-  getChairpersons,
-  getUserProfile,
-  sendOTP,
-  verifyOTP,
-  changePassword,
-} from "../controller/userController.js";
-
+  getUserApproval,
+  addPanelRequest,
+  getPanelRequests,
+  changePanel,
+  updatePanelApproval,
+} from "../controller/panelApprovalController.js";
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import multer from "multer";
@@ -44,15 +35,9 @@ const storage = new CloudinaryStorage({
 const upload = multer({ storage });
 const router = Router();
 
-router.route("/").get(getUsers).post(addUser);
-router.post("/sendOTP", sendOTP);
-router.post("/verifyOTP", verifyOTP);
-router.post("/changePassword", changePassword);
-router.put("/updateUserProfile/:id", upload.single("file"), updateUserProfile);
-router.route("/:id").delete(deleteUser).put(updateUser);
-router.put("/approvedUser/:id", approvedUser);
-router.get("/students/data", getStudents);
-router.get("/faculty/data", getfaculty);
-router.get("/getUserProfile/data/:id", getUserProfile);
-router.get("/chairpersons/data", getChairpersons);
+router.post("/", upload.single("file"), addPanelRequest);
+router.get("/:id", getUserApproval);
+router.get("/panelApprovalData/:id", getPanelRequests);
+router.put("/change-panel/:id/panel/:oldPanelId", changePanel);
+router.put("/panelApprovalStatus/:id", updatePanelApproval);
 export default router;
