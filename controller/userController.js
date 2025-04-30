@@ -19,6 +19,7 @@ export async function getUsers(req, res) {
 
 // add new user
 export async function addUser(req, res) {
+  const { password } = req.body;
   try {
     const userExist = await usersModel.findOne({ username: req.body.username });
     const emailExist = await usersModel.findOne({ email: req.body.email });
@@ -32,7 +33,7 @@ export async function addUser(req, res) {
     }
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = await usersModel.create({
       ...req.body,
