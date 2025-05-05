@@ -36,6 +36,11 @@ export const generateSchedule = async (req, res) => {
 
     const adminId = new mongoose.Types.ObjectId("67ff1871d66d128fd30735db");
 
+    if (!dateRange || !dateRange.includes(" - ")) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or missing dateRange format" });
+    }
     if (!dateRange || !panel1 || !panel2 || !panel3 || !chairperson) {
       return res.status(400).json({ message: "Missing required fields" });
     }
