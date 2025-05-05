@@ -79,13 +79,6 @@ export const generateSchedule = async (req, res) => {
       if (!schedulesByDate[sched.date]) {
         schedulesByDate[sched.date] = [];
       }
-      if (sched.time) {
-        const [start, end] = sched.time.split(" - ").map((t) => t.trim());
-        schedulesByDate[sched.date].push({
-          start: convertTo24Hour(start),
-          end: convertTo24Hour(end),
-        });
-      }
     });
 
     const generateTimeSlots = (rangeStart, rangeEnd) => {
