@@ -32,17 +32,9 @@ export async function createSchedule(req, res) {
 }
 export const generateSchedule = async (req, res) => {
   try {
-    const {
-      dateRange,
-      panel1,
-      panel2,
-      panel3,
-      panel4,
-      chairperson,
-      eventType,
-    } = req.body;
+    const { dateRange, panel1, panel2, panel3, panel4, chairperson } = req.body;
 
-    const adminId = new mongoose.Types.ObjectId("67d1534860798a27a35b0cc9");
+    const adminId = new mongoose.Types.ObjectId("67ff1871d66d128fd30735db");
 
     if (!dateRange || !panel1 || !panel2 || !panel3 || !chairperson) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -148,6 +140,7 @@ export const generateSchedule = async (req, res) => {
     return res.status(500).json({ message: "Server error", error });
   }
 };
+
 function formatTo12Hour(time24) {
   const [hour, minute] = time24.split(":").map(Number);
   const ampm = hour >= 12 ? "PM" : "AM";

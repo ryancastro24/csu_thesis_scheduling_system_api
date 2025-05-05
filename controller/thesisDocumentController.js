@@ -463,26 +463,35 @@ export async function updateThesisToDefended(req, res) {
   try {
     const { id } = req.params;
 
-    // Find and update the original thesis
-    const updatedThesis = await thesisModel.findOneAndUpdate(
-      { _id: id },
-      { defended: true },
-      { new: true }
-    );
+    // Find the thesis first
+    const thesis = await thesisModel.findById(id);
 
-    if (!updatedThesis) {
+    if (!thesis) {
       return res.status(404).json({ message: "Thesis not found" });
     }
 
-    // Create new thesis document with reset fields
+    // If type is 'final', only update defended to true
+    if (thesis.type === "final") {
+      thesis.defended = true;
+      await thesis.save();
+      return res.status(200).json({
+        message: "Final thesis marked as defended",
+        thesis,
+      });
+    }
+
+    // Otherwise, mark as defended and create a new one
+    thesis.defended = true;
+    await thesis.save();
+
     const newThesis = new thesisModel({
-      ...updatedThesis.toObject(),
-      _id: new mongoose.Types.ObjectId(), // Generate new ID
+      ...thesis.toObject(),
+      _id: new mongoose.Types.ObjectId(), // New ID
       defended: false,
       forScheduleStatus: "idle",
       approvalFile: "",
       documentLink: "",
-      panelApprovals: updatedThesis.panelApprovals.map((approval) => ({
+      panelApprovals: thesis.panelApprovals.map((approval) => ({
         ...approval,
         status: "pending",
       })),
@@ -491,13 +500,12 @@ export async function updateThesisToDefended(req, res) {
       type: "final",
     });
 
-    // Save the new thesis document
     await newThesis.save();
 
     return res.status(200).json({
       message: "Thesis updated and new version created",
-      originalThesis: updatedThesis,
-      newThesis: newThesis,
+      originalThesis: thesis,
+      newThesis,
     });
   } catch (error) {
     return res.status(500).json({ message: "Error updating thesis", error });
