@@ -34,7 +34,7 @@ export const generateSchedule = async (req, res) => {
   try {
     const { dateRange, panel1, panel2, panel3, panel4, chairperson } = req.body;
 
-    const adminId = new mongoose.Types.ObjectId("67ff1871d66d128fd30735db");
+    const adminId = new mongoose.Types.ObjectId("6819664f59a112216abf8341");
 
     if (!dateRange || !dateRange.includes(" - ")) {
       return res
@@ -56,6 +56,8 @@ export const generateSchedule = async (req, res) => {
     const allSchedules = await schedulesModel.find({
       userId: { $in: userIds },
     });
+
+    console.log("all schedules", allSchedules);
 
     const [startDate, endDate] = dateRange
       .split(" - ")
@@ -80,6 +82,7 @@ export const generateSchedule = async (req, res) => {
         schedulesByDate[sched.date] = [];
       }
       if (sched.time) {
+        console.log("i amm error here");
         const [start, end] = sched.time.split(" - ").map((t) => t.trim());
         schedulesByDate[sched.date].push({
           start: convertTo24Hour(start),
