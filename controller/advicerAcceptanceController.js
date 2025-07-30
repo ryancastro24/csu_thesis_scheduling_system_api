@@ -9,20 +9,28 @@ export async function addAdviserApproval(req, res) {
     return res.status(400).json({ message: "No file uploaded." });
   }
 
+  if (!student1 || !adviser || !proposeTitle) {
+    return res.status(400).json({ message: "student1, adviser, and proposeTitle are required." });
+  }
+
   const adviserApprovalData = await adviserAcceptanaceModel.create({
     student1Id: student1,
-    student2Id: student2,
-    student3Id: student3,
+    ...(student2 && { student2Id: student2 }),
+    ...(student3 && { student3Id: student3 }),
     adviserId: adviser,
     thesisFile: req.file.path,
     proposeTitle: proposeTitle,
   });
 
   return res.status(200).send({
-    message: "Request sent succesfully",
+    message: "Request sent successfully",
     adviserApprovalData,
   });
 }
+
+
+
+
 
 export async function getUserAdviserAcceptanceRequest(req, res) {
   const { id } = req.params;
