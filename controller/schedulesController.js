@@ -47,7 +47,7 @@ export const generateSchedule = async (req, res) => {
 
     // Default working hours (excluding lunch)
     const defaultTimeRanges = [
-      { start: "08:00", end: "11:00" },
+      { start: "08:00", end: "12:00" },
       { start: "13:00", end: "17:00" },
     ];
 
@@ -95,8 +95,8 @@ export const generateSchedule = async (req, res) => {
       const slots = [];
       let current = new Date(`1970-01-01T${rangeStart}:00Z`);
       const end = new Date(`1970-01-01T${rangeEnd}:00Z`);
-      while (new Date(current.getTime() + 2 * 60 * 60 * 1000) <= end) {
-        const endSlot = new Date(current.getTime() + 2 * 60 * 60 * 1000);
+      while (new Date(current.getTime() + 1.5 * 60 * 60 * 1000) <= end) {
+        const endSlot = new Date(current.getTime() + 1.5 * 60 * 60 * 1000);
         slots.push({
           start: current.toISOString().substring(11, 16),
           end: endSlot.toISOString().substring(11, 16),

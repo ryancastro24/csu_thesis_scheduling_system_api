@@ -124,17 +124,38 @@ export async function getAllThesis(req, res) {
 
 export async function getAllPendingThesis(req, res) {
   try {
+    const { department } = req.query; // e.g., ?department=BSCS
+
+    if (!department) {
+      return res.status(400).json({ message: "Department is required" });
+    }
+
     const thesisDocumentsData = await thesisModel
-      .find({ forScheduleStatus: { $ne: "idle" } }) // Filter out theses with status "idle"
-      .populate("students")
+      .find({ forScheduleStatus: { $ne: "idle" } })
+      .populate({
+        path: "students",
+        populate: {
+          path: "departmentId", // populate department inside users
+          model: "departments",
+        },
+      })
       .populate("adviser")
       .populate("panels")
       .populate("schedule")
       .populate("panelApprovals.panel")
       .sort({ ratingCount: -1 });
 
+    // Filter theses where at least one student belongs to the given department acronym
+    const filteredTheses = thesisDocumentsData.filter((thesis) =>
+      thesis.students.some(
+        (student) =>
+          student.departmentId && student.departmentId.acronym === department
+      )
+    );
+
+    // Update statuses based on approvals
     await Promise.all(
-      thesisDocumentsData.map(async (thesis) => {
+      filteredTheses.map(async (thesis) => {
         const allApproved = thesis.panelApprovals.every(
           (approval) => approval.status === "approve"
         );
@@ -155,7 +176,7 @@ export async function getAllPendingThesis(req, res) {
       })
     );
 
-    res.status(200).json(thesisDocumentsData);
+    res.status(200).json(filteredTheses);
   } catch (error) {
     console.error("Error retrieving thesis documents:", error);
     res
@@ -509,5 +530,33 @@ export async function updateThesisToDefended(req, res) {
     });
   } catch (error) {
     return res.status(500).json({ message: "Error updating thesis", error });
+  }
+}
+
+// get  specific thesis document by ID
+export async function getThesisDocumentById(req, res) {
+  const { id } = req.params;
+
+  console.log("Fetching thesis document with ID:", id);
+
+  try {
+    const thesisDocument = await thesisModel
+      .findById(id)
+      .populate("students")
+      .populate("adviser")
+      .populate("panels")
+      .populate("schedule")
+      .populate("panelApprovals.panel");
+
+    if (!thesisDocument) {
+      return res.status(404).json({ message: "Thesis document not found" });
+    }
+
+    return res.status(200).json(thesisDocument);
+  } catch (error) {
+    console.error("Error retrieving thesis document:", error);
+    return res
+      .status(500)
+      .json({ message: "Error retrieving thesis document", error });
   }
 }

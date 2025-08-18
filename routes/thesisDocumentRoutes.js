@@ -13,6 +13,7 @@ import {
   updateThesisScheduleApproval,
   getThesisByAdviser,
   updateThesisToDefended,
+  getThesisDocumentById, 
   getUserFinalThesisModel,
   createFinalThesisDocument,
 } from "../controller/thesisDocumentController.js";
@@ -83,4 +84,5 @@ router.post(
 
 router.get("/getThesisByAdviserData/data/:adviserId", getThesisByAdviser);
 router.put("/thesisModel/:id/defended", updateThesisToDefended);
+router.get("/getThesisDocument/data/:id", getThesisDocumentById);
 export default router;
