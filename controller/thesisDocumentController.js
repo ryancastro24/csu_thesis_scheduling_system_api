@@ -91,6 +91,7 @@ export async function getAllThesis(req, res) {
   try {
     const thesisDocumentsData = await thesisModel
       .find({
+        defended: true,
         $expr: {
           $eq: [
             {
