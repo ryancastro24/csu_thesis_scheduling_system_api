@@ -19,11 +19,10 @@ export async function updateThesisSchedule(req, res) {
     // Get all users involved in the thesis
     const adminId = thesis.adviser; // Using adviser as admin for this case
     const scheduleUsers = [
-      ...thesis.students,
+      ...(thesis.students || []).filter(Boolean), // remove null/undefined students
       thesis.adviser,
-      ...thesis.panels,
-    ];
-
+      ...(thesis.panels || []),
+    ].filter(Boolean); // also ensure a
     // Delete existing schedules
     await schedulesModel.deleteMany({ _id: thesis.schedule });
 
