@@ -17,6 +17,18 @@ export async function getUsers(req, res) {
   }
 }
 
+export async function getAllRequestingUsers(req, res) {
+  try {
+    const users = await usersModel.find({ approved: false });
+
+    return res.status(200).send(users);
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Error fetching users", error: error.message });
+  }
+}
+
 // add new user
 export async function addUser(req, res) {
   try {

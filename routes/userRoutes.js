@@ -13,6 +13,7 @@ import {
   sendOTP,
   verifyOTP,
   changePassword,
+  getAllRequestingUsers,
 } from "../controller/userController.js";
 
 import { v2 as cloudinary } from "cloudinary";
@@ -45,6 +46,7 @@ const upload = multer({ storage });
 const router = Router();
 
 router.route("/").get(getUsers).post(addUser);
+router.get("/requestingUsers", getAllRequestingUsers);
 router.post("/sendOTP", sendOTP);
 router.post("/verifyOTP", verifyOTP);
 router.post("/changePassword", changePassword);
