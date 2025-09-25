@@ -1,7 +1,7 @@
 import usersModel from "../models/usersModel.js";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
-
+import adviserAcceptanaceModel from "../models/adviserAcceptanaceModel.js";
 // get all users
 export async function getUsers(req, res) {
   try {
@@ -167,7 +167,21 @@ export async function approvedUser(req, res) {
 
 export async function getStudents(req, res) {
   try {
-    const students = await usersModel.find({ userType: "student" });
+    // Step 1: Collect assigned student IDs
+    const adviserAcceptance = await adviserAcceptanaceModel.find(
+      {},
+      "student1Id student2Id student3Id"
+    );
+    const assignedIds = adviserAcceptance.flatMap((a) => [
+      a.student1Id,
+      a.student2Id,
+    ]);
+
+    // Step 2: Get students not in assignedIds
+    const students = await usersModel.find({
+      userType: "student",
+      _id: { $nin: assignedIds },
+    });
 
     res.status(200).json(students);
   } catch (error) {
