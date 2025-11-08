@@ -167,21 +167,38 @@ export async function approvedUser(req, res) {
 
 export async function getStudents(req, res) {
   try {
-    // Step 1: Collect assigned student IDs
-    const adviserAcceptance = await adviserAcceptanaceModel.find(
-      { status: "reject" }, // ✅ Filter only documents with status = "reject"
-      "student1Id student2Id student3Id"
+    // Step 1: Get all adviserAcceptance records
+    const adviserAcceptances = await adviserAcceptanaceModel.find(
+      {},
+      "student1Id student2Id student3Id status"
     );
 
-    const assignedIds = adviserAcceptance.flatMap((a) => [
-      a.student1Id,
-      a.student2Id,
-    ]);
+    // Collect student IDs grouped by status
+    const pendingIds = adviserAcceptances
+      .filter((a) => a.status === "pending")
+      .flatMap((a) => [a.student1Id, a.student2Id, a.student3Id])
+      .filter(Boolean);
 
-    // Step 2: Get students not in assignedIds
+    const rejectedIds = adviserAcceptances
+      .filter((a) => a.status === "reject")
+      .flatMap((a) => [a.student1Id, a.student2Id, a.student3Id])
+      .filter(Boolean);
+
+    const allAssignedIds = adviserAcceptances
+      .flatMap((a) => [a.student1Id, a.student2Id, a.student3Id])
+      .filter(Boolean);
+
+    // Step 2: Find students who match:
+    // - have pending adviserAcceptance
+    // - OR have rejected adviserAcceptance
+    // - OR have no adviserAcceptance at all
     const students = await usersModel.find({
       userType: "student",
-      _id: { $nin: assignedIds },
+      $or: [
+        { _id: { $in: pendingIds } }, // ✅ pending
+        { _id: { $in: rejectedIds } }, // ✅ rejected
+        { _id: { $nin: allAssignedIds } }, // ✅ not yet assigned
+      ],
     });
 
     res.status(200).json(students);
