@@ -169,9 +169,10 @@ export async function getStudents(req, res) {
   try {
     // Step 1: Collect assigned student IDs
     const adviserAcceptance = await adviserAcceptanaceModel.find(
-      {},
+      { status: "reject" }, // ✅ Filter only documents with status = "reject"
       "student1Id student2Id student3Id"
     );
+
     const assignedIds = adviserAcceptance.flatMap((a) => [
       a.student1Id,
       a.student2Id,
