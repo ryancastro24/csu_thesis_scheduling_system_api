@@ -42,11 +42,11 @@ export async function addUser(req, res) {
     const emailExist = await usersModel.findOne({ email });
 
     if (userExist) {
-      return res.status(400).json({ error: "Username already exists!" });
+      return res.status(200).json({ message: "User already exists" });
     }
 
     if (emailExist) {
-      return res.status(400).json({ error: "Email already exists!" });
+      return res.status(200).json({ message: "Email already exists!" });
     }
 
     const salt = await bcrypt.genSalt(10);
