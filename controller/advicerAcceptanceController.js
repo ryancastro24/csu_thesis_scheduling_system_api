@@ -24,9 +24,11 @@ export async function addAdviserApproval(req, res) {
       ...(student2 && { student2Id: student2 }),
       ...(student3 && { student3Id: student3 }),
       adviserId: adviser,
+      coAdviserId: coAdviser || null, // optional reference to co-adviser
+      role: "adviser", // explicitly mark as main adviser
       thesisFile: req.file.path,
       proposeTitle,
-      status: "pending", // default status
+      status: "pending",
     });
     records.push(adviserRecord);
 
@@ -37,9 +39,10 @@ export async function addAdviserApproval(req, res) {
         ...(student2 && { student2Id: student2 }),
         ...(student3 && { student3Id: student3 }),
         adviserId: coAdviser,
+        role: "coAdviser", // explicitly mark as co-adviser
         thesisFile: req.file.path,
         proposeTitle,
-        status: "pending", // default status
+        status: "pending",
       });
       records.push(coAdviserRecord);
     }
@@ -57,6 +60,8 @@ export async function addAdviserApproval(req, res) {
 export async function getUserAdviserAcceptanceRequest(req, res) {
   const { id } = req.params;
 
+  console.log(id);
+
   try {
     const adviserAcceptanceRequestData = await adviserAcceptanaceModel
       .find({
@@ -64,6 +69,7 @@ export async function getUserAdviserAcceptanceRequest(req, res) {
       })
       .sort({ createdAt: -1 }); // newest first
 
+    console.log(adviserAcceptanceRequestData);
     return res.status(200).send(adviserAcceptanceRequestData);
   } catch (error) {
     console.error("Error fetching adviser acceptance request:", error);
