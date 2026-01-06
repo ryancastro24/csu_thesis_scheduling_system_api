@@ -13,8 +13,16 @@ export async function getAllSchedules(req, res) {
 // 🔹 Create a new schedule
 export async function createSchedule(req, res) {
   try {
-    const { date, time, eventType } = req.body;
-    const creator = req.user; // must come from auth middleware
+    const { date, time, eventType, userId } = req.body;
+
+    // 🔍 Find the user who submitted the schedule
+    const creator = await usersModel.findById(userId);
+
+    if (!creator) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
 
     // 🔴 ADMIN → create schedules for chairperson & faculty
     if (creator.userType === "admin") {
@@ -26,8 +34,8 @@ export async function createSchedule(req, res) {
         date,
         time,
         eventType,
-        userId: user._id, // 👈 their own ID
-        createdBy: creator._id,
+        userId: user._id, // assigned user
+        createdBy: creator._id, // admin who created it
       }));
 
       await schedulesModel.insertMany(schedules);
