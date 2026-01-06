@@ -14,41 +14,37 @@ export async function getAllSchedules(req, res) {
 export async function createSchedule(req, res) {
   try {
     const { date, time, eventType } = req.body;
-    const { userId, role, userType } = req.user;
-    // role: admin | user
-    // userType: faculty | chairperson | etc
+    const creator = req.user; // must come from auth middleware
 
-    // 🔴 ADMIN → create schedule for ALL faculty & chairperson
-    if (role === "admin") {
+    // 🔴 ADMIN → create schedules for chairperson & faculty
+    if (creator.userType === "admin") {
       const users = await usersModel.find({
-        userType: { $in: ["faculty", "chairperson"] },
+        userType: { $in: ["chairperson", "faculty"] },
       });
 
       const schedules = users.map((user) => ({
         date,
         time,
         eventType,
-        userId: user._id,
-        createdBy: userId,
-        createdByRole: "admin",
+        userId: user._id, // 👈 their own ID
+        createdBy: creator._id,
       }));
 
       await schedulesModel.insertMany(schedules);
 
       return res.status(201).json({
-        message: "Schedule created for faculty and chairpersons",
+        message: "Schedule created for all faculty and chairpersons",
         count: schedules.length,
       });
     }
 
-    // 🟢 FACULTY / CHAIRPERSON → create schedule ONLY for SELF
+    // 🟢 FACULTY / CHAIRPERSON → create schedule only for self
     const newSchedule = new schedulesModel({
       date,
       time,
       eventType,
-      userId,
-      createdBy: userId,
-      createdByRole: userType,
+      userId: creator._id,
+      createdBy: creator._id,
     });
 
     await newSchedule.save();
