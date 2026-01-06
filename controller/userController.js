@@ -127,35 +127,35 @@ export async function approvedUser(req, res) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Send approval email to user
-    const transporter = nodemailer.createTransport({
-      service: process.env.EMAIL_SERVICE,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
+    // // // Send approval email to user
+    // // const transporter = nodemailer.createTransport({
+    // //   service: process.env.EMAIL_SERVICE,
+    // //   auth: {
+    // //     user: process.env.EMAIL_USER,
+    // //     pass: process.env.EMAIL_PASSWORD,
+    // //   },
+    // // });
 
-    const mailOptions = {
-      from: `"CCIS Thesis Scheduling System" <noreply@ccis-scheduling.com>`,
-      to: updatedUser.email,
-      subject: "Account Approval Notification",
-      html: `
-        <h1>Account Approved</h1>
-        <p>Dear ${updatedUser.firstname || "User"},</p>
-        <p>Your account has been approved. You can now access all features of our platform.</p>
-        <p>Thank you for your patience.</p>
-        <p>Best regards,</p>
-        <p>CCIS Thesis Scheduling Admin Team</p>
-      `,
-    };
+    // // const mailOptions = {
+    // //   from: `"CCIS Thesis Scheduling System" <noreply@ccis-scheduling.com>`,
+    // //   to: updatedUser.email,
+    // //   subject: "Account Approval Notification",
+    // //   html: `
+    // //     <h1>Account Approved</h1>
+    // //     <p>Dear ${updatedUser.firstname || "User"},</p>
+    // //     <p>Your account has been approved. You can now access all features of our platform.</p>
+    // //     <p>Thank you for your patience.</p>
+    // //     <p>Best regards,</p>
+    // //     <p>CCIS Thesis Scheduling Admin Team</p>
+    // //   `,
+    // // };
 
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log(`Email sent successfully to ${updatedUser.email}`);
-    } catch (emailError) {
-      console.error("Failed to send email:", emailError);
-    }
+    // try {
+    //   await transporter.sendMail(mailOptions);
+    //   console.log(`Email sent successfully to ${updatedUser.email}`);
+    // } catch (emailError) {
+    //   console.error("Failed to send email:", emailError);
+    // }
 
     res
       .status(200)
