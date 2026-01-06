@@ -1,6 +1,6 @@
 import schedulesModel from "../models/schedulesModel.js";
 import mongoose from "mongoose";
-// 🔹 Get all schedules
+import usersModel from "../models/usersModel.js";
 export async function getAllSchedules(req, res) {
   try {
     const scheduleData = await schedulesModel.find();
@@ -10,7 +10,6 @@ export async function getAllSchedules(req, res) {
   }
 }
 
-// 🔹 Create a new schedule
 export async function createSchedule(req, res) {
   try {
     const { date, time, eventType, userId } = req.body;
@@ -24,25 +23,37 @@ export async function createSchedule(req, res) {
       });
     }
 
-    // 🔴 ADMIN → create schedules for chairperson & faculty
+    // 🔴 ADMIN → create schedules for admin, faculty, and chairperson
     if (creator.userType === "admin") {
       const users = await usersModel.find({
         userType: { $in: ["chairperson", "faculty"] },
       });
 
-      const schedules = users.map((user) => ({
-        date,
-        time,
-        eventType,
-        userId: user._id, // assigned user
-        createdBy: creator._id, // admin who created it
-      }));
+      const schedules = [
+        // ✅ Admin's own schedule
+        {
+          date,
+          time,
+          eventType,
+          userId: creator._id,
+          createdBy: creator._id,
+        },
+
+        // ✅ Faculty & Chairperson schedules
+        ...users.map((user) => ({
+          date,
+          time,
+          eventType,
+          userId: user._id,
+          createdBy: creator._id,
+        })),
+      ];
 
       await schedulesModel.insertMany(schedules);
 
       return res.status(201).json({
-        message: "Schedule created for all faculty and chairpersons",
-        count: schedules.length,
+        message: "Schedule created for admin, faculty, and chairpersons",
+        totalCreated: schedules.length,
       });
     }
 
@@ -69,6 +80,7 @@ export async function createSchedule(req, res) {
     });
   }
 }
+
 export const generateSchedule = async (req, res) => {
   try {
     const { dateRange, panel1, panel2, panel3, panel4, chairperson } = req.body;
