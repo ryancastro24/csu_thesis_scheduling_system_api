@@ -13,21 +13,56 @@ export async function getAllSchedules(req, res) {
 // 🔹 Create a new schedule
 export async function createSchedule(req, res) {
   try {
-    const { date, time, eventType, userId } = req.body;
+    const { date, time, eventType } = req.body;
+    const { _id: userId, role, userType } = req.user;
+    // role: admin | user
+    // userType: faculty | chairperson | etc
 
+    // 🔴 ADMIN → create schedule for ALL faculty & chairperson
+    if (role === "admin") {
+      const users = await usersModel.find({
+        userType: { $in: ["faculty", "chairperson"] },
+      });
+
+      const schedules = users.map((user) => ({
+        date,
+        time,
+        eventType,
+        userId: user._id,
+        createdBy: userId,
+        createdByRole: "admin",
+      }));
+
+      await schedulesModel.insertMany(schedules);
+
+      return res.status(201).json({
+        message: "Schedule created for faculty and chairpersons",
+        count: schedules.length,
+      });
+    }
+
+    // 🟢 FACULTY / CHAIRPERSON → create schedule ONLY for SELF
     const newSchedule = new schedulesModel({
       date,
       time,
       eventType,
       userId,
+      createdBy: userId,
+      createdByRole: userType,
     });
 
     await newSchedule.save();
-    res
-      .status(201)
-      .json({ message: "Schedule created successfully", newSchedule });
+
+    res.status(201).json({
+      message: "Schedule created successfully",
+      newSchedule,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error creating schedule", error });
+    console.error("Create schedule error:", error);
+    res.status(500).json({
+      message: "Error creating schedule",
+      error: error.message,
+    });
   }
 }
 export const generateSchedule = async (req, res) => {
