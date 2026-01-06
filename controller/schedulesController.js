@@ -14,7 +14,7 @@ export async function getAllSchedules(req, res) {
 export async function createSchedule(req, res) {
   try {
     const { date, time, eventType } = req.body;
-    const { _id: userId, role, userType } = req.user;
+    const { userId, role, userType } = req.user;
     // role: admin | user
     // userType: faculty | chairperson | etc
 
