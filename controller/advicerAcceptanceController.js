@@ -59,7 +59,7 @@ export async function getUserAdviserAcceptanceRequest(req, res) {
 
   try {
     const adviserAcceptanceRequestData = await adviserAcceptanaceModel
-      .findOne({
+      .find({
         $or: [{ student1Id: id }, { student2Id: id }, { student3Id: id }],
       })
       .sort({ createdAt: -1 }); // newest first
