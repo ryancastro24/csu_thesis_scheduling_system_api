@@ -1,36 +1,58 @@
 import adviserAcceptanaceModel from "../models/adviserAcceptanaceModel.js";
 import thesisModel from "../models/thesisModel.js";
+
 export async function addAdviserApproval(req, res) {
-  const { student1, student2, student3, adviser, proposeTitle } = req.body;
+  try {
+    const { student1, student2, student3, adviser, coAdviser, proposeTitle } =
+      req.body;
 
-  console.log("file uploaded", req.file);
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded." });
+    }
 
-  if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded." });
+    if (!student1 || !adviser || !proposeTitle) {
+      return res
+        .status(400)
+        .json({ message: "student1, adviser, and proposeTitle are required." });
+    }
+
+    const records = [];
+
+    // 1️⃣ Create record for main adviser
+    const adviserRecord = await adviserAcceptanaceModel.create({
+      student1Id: student1,
+      ...(student2 && { student2Id: student2 }),
+      ...(student3 && { student3Id: student3 }),
+      adviserId: adviser,
+      thesisFile: req.file.path,
+      proposeTitle,
+      status: "pending", // default status
+    });
+    records.push(adviserRecord);
+
+    // 2️⃣ Create record for co-adviser (if provided)
+    if (coAdviser) {
+      const coAdviserRecord = await adviserAcceptanaceModel.create({
+        student1Id: student1,
+        ...(student2 && { student2Id: student2 }),
+        ...(student3 && { student3Id: student3 }),
+        adviserId: coAdviser,
+        thesisFile: req.file.path,
+        proposeTitle,
+        status: "pending", // default status
+      });
+      records.push(coAdviserRecord);
+    }
+
+    return res.status(200).send({
+      message: "Request sent successfully",
+      adviserApprovalData: records, // array of adviser & co-adviser records
+    });
+  } catch (error) {
+    console.error("Error adding adviser approval:", error);
+    return res.status(500).json({ message: "Internal Server Error", error });
   }
-
-  if (!student1 || !adviser || !proposeTitle) {
-    return res.status(400).json({ message: "student1, adviser, and proposeTitle are required." });
-  }
-
-  const adviserApprovalData = await adviserAcceptanaceModel.create({
-    student1Id: student1,
-    ...(student2 && { student2Id: student2 }),
-    ...(student3 && { student3Id: student3 }),
-    adviserId: adviser,
-    thesisFile: req.file.path,
-    proposeTitle: proposeTitle,
-  });
-
-  return res.status(200).send({
-    message: "Request sent successfully",
-    adviserApprovalData,
-  });
 }
-
-
-
-
 
 export async function getUserAdviserAcceptanceRequest(req, res) {
   const { id } = req.params;
