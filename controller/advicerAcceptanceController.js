@@ -60,20 +60,20 @@ export async function addAdviserApproval(req, res) {
 export async function getUserAdviserAcceptanceRequest(req, res) {
   const { id } = req.params;
 
-  console.log(id);
-
   try {
     const adviserAcceptanceRequestData = await adviserAcceptanaceModel
       .find({
         $or: [{ student1Id: id }, { student2Id: id }, { student3Id: id }],
       })
+      .populate("adviserId") // 👈 populate adviser
       .sort({ createdAt: -1 }); // newest first
 
-    console.log(adviserAcceptanceRequestData);
-    return res.status(200).send(adviserAcceptanceRequestData);
+    return res.status(200).json(adviserAcceptanceRequestData);
   } catch (error) {
     console.error("Error fetching adviser acceptance request:", error);
-    return res.status(500).send({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Internal server error",
+    });
   }
 }
 
