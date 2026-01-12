@@ -7,6 +7,7 @@ export async function getUserApproval(req, res) {
   try {
     const adviserAcceptanceRequestData = await adviserAcceptanaceModel
       .findOne({
+        role: "adviser",
         $or: [{ student1Id: id }, { student2Id: id }, { student3Id: id }],
       })
       .sort({ createdAt: -1 }); // newest first
@@ -15,12 +16,18 @@ export async function getUserApproval(req, res) {
       return res.status(200).send([]);
     }
 
+    console.log(
+      "Adviser Acceptance Request Data:",
+      adviserAcceptanceRequestData
+    );
+
     const userPanelApprovals = await panelApprovalModel
       .find({
         proposalId: adviserAcceptanceRequestData._id,
       })
       .populate("panelId");
 
+    console.log("User Panel Approvals:", userPanelApprovals);
     return res.status(200).send(userPanelApprovals);
   } catch (error) {
     console.error("Error fetching adviser acceptance request:", error);

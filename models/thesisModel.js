@@ -69,8 +69,8 @@ const thesisDocumentsSchema = new mongoose.Schema(
     },
 
     defended: {
-      type: Boolean,
-      default: false, // Default value set to false
+      type: String,
+      default: "pending", // Default value set to false
     },
     forSchedule: {
       type: Boolean,
