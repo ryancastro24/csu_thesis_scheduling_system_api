@@ -340,6 +340,10 @@ export async function createThesisDocument(req, res) {
     const thesisFile = req.files["thesisFile"]?.[0];
     const approvalFile = req.files["approvalFile"]?.[0];
 
+    console.log("Uploaded Files:", req.files);
+    console.log("Thesis File:", thesisFile);
+    console.log("Approval File:", approvalFile);
+
     if (!thesisFile || !approvalFile) {
       return res.status(400).json({ message: "Both files are required." });
     }
@@ -347,6 +351,7 @@ export async function createThesisDocument(req, res) {
     const { userId } = req.body;
 
     if (!userId) {
+      console.log("User ID not provided in request body.");
       return res.status(400).json({ message: "User ID is required." });
     }
 
@@ -371,6 +376,8 @@ export async function createThesisDocument(req, res) {
       message: "Thesis document uploaded successfully.",
       updatedThesis,
     });
+
+    console.log("Updated Thesis:", updatedThesis);
   } catch (error) {
     console.error("Upload error:", error);
     return res.status(500).json({ error: "File upload failed." });

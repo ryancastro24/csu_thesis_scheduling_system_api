@@ -97,44 +97,66 @@ export async function approvedProposal(req, res) {
   const { id } = req.params;
 
   try {
-    // 1. Update the status of the proposal
-    const approveProposalData = await adviserAcceptanaceModel.findByIdAndUpdate(
+    // 1. Update the current approval record (adviser OR co-adviser)
+    const updatedApproval = await adviserAcceptanaceModel.findByIdAndUpdate(
       id,
-      { status },
-      { new: true } // returns the updated document
+      { status, remarks },
+      { new: true }
     );
 
-    // 2. If the proposal is approved, create a new thesis record
-    if (approveProposalData.status === "approve") {
-      const thesisModelData = await thesisModel.create({
-        students: [
-          approveProposalData.student1Id,
-          approveProposalData.student2Id,
-          approveProposalData.student3Id,
-        ],
-        thesisTitle: approveProposalData.proposeTitle,
-        adviser: approveProposalData.adviserId,
-        type: "proposal",
-      });
-
-      return res.status(200).json({
-        message: "Proposal approved and thesis created",
-        thesisModelData,
-      });
+    if (!updatedApproval) {
+      return res.status(404).json({ message: "Approval record not found" });
     }
 
-    if (approveProposalData.status === "reject") {
-      const approveProposalData =
-        await adviserAcceptanaceModel.findByIdAndUpdate(
-          id,
-          { remarks },
-          { new: true } // returns the updated document
-        );
+    // 2. Fetch BOTH adviser & co-adviser records for the same proposal
+    const approvals = await adviserAcceptanaceModel.find({
+      student1Id: updatedApproval.student1Id,
+      proposeTitle: updatedApproval.proposeTitle,
+      role: { $in: ["adviser", "coAdviser"] },
+    });
+
+    const adviserApproved = approvals.some(
+      (a) => a.role === "adviser" && a.status === "approve"
+    );
+
+    const coAdviserApproved = approvals.some(
+      (a) => a.role === "coAdviser" && a.status === "approve"
+    );
+
+    // 3. If BOTH approved → create thesis
+    if (adviserApproved && coAdviserApproved) {
+      // Prevent duplicate thesis creation
+      const existingThesis = await thesisModel.findOne({
+        thesisTitle: updatedApproval.proposeTitle,
+        students: updatedApproval.student1Id,
+      });
+
+      if (!existingThesis) {
+        const adviserRecord = approvals.find((a) => a.role === "adviser");
+
+        const thesisModelData = await thesisModel.create({
+          students: [
+            adviserRecord.student1Id,
+            adviserRecord.student2Id,
+            adviserRecord.student3Id,
+          ].filter(Boolean),
+          thesisTitle: adviserRecord.proposeTitle,
+          adviser: adviserRecord.adviserId,
+          coAdviser: adviserRecord.coAdviserId,
+          type: "proposal",
+        });
+
+        return res.status(200).json({
+          message: "Both adviser and co-adviser approved. Thesis created.",
+          thesisModelData,
+        });
+      }
     }
 
+    // 4. Default response (only one has approved so far)
     return res.status(200).json({
-      message: "Proposal status updated",
-      approveProposalData,
+      message: "Proposal status updated. Waiting for other approval.",
+      updatedApproval,
     });
   } catch (error) {
     console.error("Error approving proposal:", error);
