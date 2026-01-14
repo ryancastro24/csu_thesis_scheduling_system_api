@@ -163,3 +163,29 @@ export async function approvedProposal(req, res) {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 }
+
+export async function changeAdviserRequest(req, res) {
+  const { id, adviserId } = req.params;
+
+  console.log("Change adviser request received for new adviser ID:", adviserId);
+  console.log("Target request ID to update:", id);
+  try {
+    const updatedRequest = await adviserAcceptanaceModel.findByIdAndUpdate(
+      id,
+      { adviserId: adviserId, status: "pending" },
+      { new: true }
+    );
+
+    if (!updatedRequest) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    return res.status(200).json({
+      message: "Adviser and co-adviser changed successfully",
+      updatedRequest,
+    });
+  } catch (error) {
+    console.error("Error changing adviser request:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+}

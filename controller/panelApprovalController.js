@@ -1,6 +1,7 @@
 import panelApprovalModel from "../models/panelApprovalModel.js";
 import adviserAcceptanaceModel from "../models/adviserAcceptanaceModel.js";
 import thesisModel from "../models/thesisModel.js";
+
 export async function getUserApproval(req, res) {
   const { id } = req.params;
 
@@ -39,50 +40,101 @@ export async function addPanelRequest(req, res) {
   const { faculty1, faculty2, faculty3, faculty4, proposalId, proposeTitle } =
     req.body;
 
-  console.log("file uploaded", req.file);
+  console.log("running addPanelRequest");
 
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded." });
   }
 
   try {
-    const panelRequests = [
-      {
-        proposalId,
-        panelId: faculty1,
-        proposeTitle,
-        thesisFile: req.file.path,
-      },
-      {
-        proposalId,
-        panelId: faculty2,
-        proposeTitle,
-        thesisFile: req.file.path,
-      },
-      {
-        proposalId,
-        panelId: faculty3,
-        proposeTitle,
-        thesisFile: req.file.path,
-      },
-      {
-        proposalId,
-        panelId: faculty4,
-        proposeTitle,
-        thesisFile: req.file.path,
-      },
-    ];
+    /* ---------------------------------
+       1️⃣ Find adviser acceptance
+    ----------------------------------*/
+    const adviserAcceptance = await adviserAcceptanaceModel.findById(
+      proposalId
+    );
 
-    // Create all four documents at once
-    const createdPanels = await panelApprovalModel.insertMany(panelRequests);
+    if (!adviserAcceptance) {
+      return res.status(404).json({
+        message: "Adviser acceptance not found",
+      });
+    }
+
+    /* ---------------------------------
+       2️⃣ Extract student IDs
+       (support up to 3 students)
+    ----------------------------------*/
+    const studentIds = [
+      adviserAcceptance.student1Id,
+      adviserAcceptance.student2Id,
+      adviserAcceptance.student3Id,
+    ].filter(Boolean);
+
+    if (studentIds.length === 0) {
+      return res.status(400).json({
+        message: "No students found in adviser acceptance",
+      });
+    }
+
+    /* ---------------------------------
+       3️⃣ Find thesis by students
+    ----------------------------------*/
+    const thesis = await thesisModel.findOne({
+      students: { $in: studentIds },
+    });
+
+    if (!thesis) {
+      return res.status(404).json({
+        message: "No thesis found for the given students",
+      });
+    }
+
+    /* ---------------------------------
+       4️⃣ Prepare panel data
+    ----------------------------------*/
+    const panelIds = [faculty1, faculty2, faculty3, faculty4].filter(Boolean);
+
+    /* ---------------------------------
+       5️⃣ Create panelApproval documents
+    ----------------------------------*/
+    const panelRequests = panelIds.map((panelId) => ({
+      proposalId,
+      panelId,
+      proposeTitle,
+      thesisFile: req.file.path,
+    }));
+
+    await panelApprovalModel.insertMany(panelRequests);
+
+    /* ---------------------------------
+       6️⃣ Embedded panel approvals
+       (matches thesis schema)
+    ----------------------------------*/
+    const embeddedPanelApprovals = panelIds.map((panelId) => ({
+      panel: panelId,
+      status: "pending",
+      remarks: "",
+    }));
+
+    /* ---------------------------------
+       7️⃣ Update thesis document
+    ----------------------------------*/
+    thesis.panels = panelIds;
+    thesis.panelApprovals = embeddedPanelApprovals;
+    thesis.documentLink = req.file.path;
+    thesis.status = "pending";
+
+    await thesis.save();
 
     return res.status(201).json({
-      message: "Panel approval requests created successfully",
-      data: createdPanels,
+      message: "Panel requests created and thesis updated successfully",
+      thesis,
     });
   } catch (error) {
-    console.error("Error creating panel approval requests:", error);
-    return res.status(500).json({ error: "Failed to create panel requests" });
+    console.error("Error creating panel requests:", error);
+    return res.status(500).json({
+      message: "Failed to create panel requests",
+    });
   }
 }
 

@@ -4,6 +4,7 @@ import {
   getUserAdviserAcceptanceRequest,
   getAdviserAcceptanceRequest,
   approvedProposal,
+  changeAdviserRequest,
 } from "../controller/advicerAcceptanceController.js";
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
@@ -38,4 +39,5 @@ router.post("/", upload.single("file"), addAdviserApproval);
 router.get("/:id", getUserAdviserAcceptanceRequest);
 router.get("/adviserApporvals/:id", getAdviserAcceptanceRequest);
 router.put("/approveProposal/:id", approvedProposal);
+router.put("/changedAdviserRequest/:id/:adviserId", changeAdviserRequest);
 export default router;
