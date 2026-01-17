@@ -13,9 +13,11 @@ import {
   updateThesisScheduleApproval,
   getThesisByAdviser,
   updateThesisToDefended,
-  getThesisDocumentById, 
+  getThesisDocumentById,
   getUserFinalThesisModel,
   createFinalThesisDocument,
+  getFinalAllThesisDocument,
+  getAllThesisDocument,
 } from "../controller/thesisDocumentController.js";
 
 import { v2 as cloudinary } from "cloudinary";
@@ -85,4 +87,7 @@ router.post(
 router.get("/getThesisByAdviserData/data/:adviserId", getThesisByAdviser);
 router.put("/thesisModel/:id/defended", updateThesisToDefended);
 router.get("/getThesisDocument/data/:id", getThesisDocumentById);
+
+router.get("/getAllFinalizaedThesis/data", getFinalAllThesisDocument);
+router.get("/getAllThesisData/data", getAllThesisDocument);
 export default router;

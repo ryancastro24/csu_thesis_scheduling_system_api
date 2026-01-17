@@ -185,6 +185,98 @@ export async function getAllPendingThesis(req, res) {
   }
 }
 
+// get all thesis documents that are finalized
+export async function getFinalAllThesisDocument(req, res) {
+  try {
+    const thesisDocumentsData = await thesisModel
+      .find({
+        defended: "defended",
+      })
+      .populate("students")
+      .populate("adviser")
+      .populate("panels")
+      .populate("schedule")
+      .populate("panelApprovals.panel")
+      .sort({ ratingCount: -1 });
+
+    // Compute status in-memory only (no DB writes)
+    const processedTheses = thesisDocumentsData.map((thesis) => {
+      const thesisObj = thesis.toObject();
+
+      if (thesisObj.panelApprovals?.length) {
+        const allApproved = thesisObj.panelApprovals.every(
+          (approval) => approval.status === "approve"
+        );
+
+        const anyRejected = thesisObj.panelApprovals.some(
+          (approval) => approval.status === "reject"
+        );
+
+        if (allApproved) {
+          thesisObj.status = "approved";
+        } else if (anyRejected) {
+          thesisObj.status = "rejected";
+          thesisObj.reschedule = true;
+        }
+      }
+
+      return thesisObj;
+    });
+
+    res.status(200).json(processedTheses);
+  } catch (error) {
+    console.error("Error retrieving final thesis documents:", error);
+    res.status(500).json({
+      message: "Error retrieving final thesis documents",
+      error,
+    });
+  }
+}
+
+export async function getAllThesisDocument(req, res) {
+  try {
+    const thesisDocumentsData = await thesisModel
+      .find()
+      .populate("students")
+      .populate("adviser")
+      .populate("panels")
+      .populate("schedule")
+      .populate("panelApprovals.panel")
+      .sort({ ratingCount: -1 });
+
+    // Compute status in-memory only (no DB writes)
+    const processedTheses = thesisDocumentsData.map((thesis) => {
+      const thesisObj = thesis.toObject();
+
+      if (thesisObj.panelApprovals?.length) {
+        const allApproved = thesisObj.panelApprovals.every(
+          (approval) => approval.status === "approve"
+        );
+
+        const anyRejected = thesisObj.panelApprovals.some(
+          (approval) => approval.status === "reject"
+        );
+
+        if (allApproved) {
+          thesisObj.status = "approved";
+        } else if (anyRejected) {
+          thesisObj.status = "rejected";
+          thesisObj.reschedule = true;
+        }
+      }
+
+      return thesisObj;
+    });
+
+    res.status(200).json(processedTheses);
+  } catch (error) {
+    console.error("Error retrieving final thesis documents:", error);
+    res.status(500).json({
+      message: "Error retrieving final thesis documents",
+      error,
+    });
+  }
+}
 // get thesis by panel
 
 export async function getThesisByPanel(req, res) {
@@ -490,31 +582,86 @@ export async function getThesisByAdviser(req, res) {
 export async function updateThesisToDefended(req, res) {
   try {
     const { id } = req.params;
+    const { status } = req.body; // new status coming from frontend
 
-    // Find the thesis first
+    // Find the thesis
     const thesis = await thesisModel.findById(id);
 
     if (!thesis) {
       return res.status(404).json({ message: "Thesis not found" });
     }
 
-    // If type is 'final', only update defended to true
+    // ✅ Update thesis status from request
+    if (status) {
+      thesis.status = status;
+    }
+
+    /**
+     * ===============================
+     * CASE 1: If thesis is FINAL
+     * ===============================
+     * - Only mark as defended
+     * - No new thesis creation
+     */
     if (thesis.type === "final") {
       thesis.defended = true;
       await thesis.save();
+
       return res.status(200).json({
         message: "Final thesis marked as defended",
         thesis,
       });
     }
 
-    // Otherwise, mark as defended and create a new one
+    /**
+     * ===============================
+     * CASE 2: If status is RE-DEFENSE
+     * ===============================
+     * - Mark defended
+     * - Do NOT create final thesis
+     */
+    if (status === "re-defense") {
+      thesis.defended = true;
+      await thesis.save();
+
+      return res.status(200).json({
+        message: "Thesis marked for re-defense. No final thesis created.",
+        thesis,
+      });
+    }
+
+    /**
+     * ===========================================
+     * CASE 3: Check if FINAL thesis already exists
+     * ===========================================
+     */
+    const existingFinalThesis = await thesisModel.findOne({
+      parentThesisId: thesis._id,
+      type: "final",
+    });
+
+    // Mark current thesis as defended
     thesis.defended = true;
     await thesis.save();
 
+    if (existingFinalThesis) {
+      return res.status(200).json({
+        message:
+          "Thesis defended. Final thesis already exists, no new one created.",
+        thesis,
+        existingFinalThesis,
+      });
+    }
+
+    /**
+     * ===============================
+     * CASE 4: Create FINAL thesis
+     * ===============================
+     */
     const newThesis = new thesisModel({
       ...thesis.toObject(),
-      _id: new mongoose.Types.ObjectId(), // New ID
+      _id: new mongoose.Types.ObjectId(),
+      parentThesisId: thesis._id, // ✅ important for tracking versions
       defended: false,
       forScheduleStatus: "idle",
       approvalFile: "",
@@ -526,17 +673,23 @@ export async function updateThesisToDefended(req, res) {
       schedule: null,
       ratingCount: 0,
       type: "final",
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     await newThesis.save();
 
     return res.status(200).json({
-      message: "Thesis updated and new version created",
+      message: "Thesis defended and final thesis created",
       originalThesis: thesis,
       newThesis,
     });
   } catch (error) {
-    return res.status(500).json({ message: "Error updating thesis", error });
+    return res.status(500).json({
+      message: "Error updating thesis",
+      error: error.message,
+    });
   }
 }
 
