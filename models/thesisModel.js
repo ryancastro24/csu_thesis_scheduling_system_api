@@ -49,7 +49,13 @@ const thesisDocumentsSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: [
+        "pending",
+        "defended",
+        "minor revision",
+        "major revision",
+        "re-defense",
+      ],
       default: "pending",
     },
     type: {
