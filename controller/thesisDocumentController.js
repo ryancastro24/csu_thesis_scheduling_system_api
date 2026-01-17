@@ -582,72 +582,86 @@ export async function getThesisByAdviser(req, res) {
 export async function updateThesisToDefended(req, res) {
   try {
     const { id } = req.params;
-    const { status } = req.body; // new status coming from frontend
+    const { status } = req.body; // 👈 incoming value
 
-    // Find the thesis
     const thesis = await thesisModel.findById(id);
 
     if (!thesis) {
       return res.status(404).json({ message: "Thesis not found" });
     }
 
-    // ✅ Update thesis status from request
+    /**
+     * ===============================
+     * 1️⃣ Map status → defended field
+     * ===============================
+     */
     if (status) {
-      thesis.status = status;
+      thesis.defended = status;
+    }
+
+    /**
+     * =====================================
+     * 2️⃣ These statuses NEVER create FINAL
+     * =====================================
+     */
+    const NO_FINAL_STATUSES = [
+      "minor revision",
+      "major revision",
+      "re-defense",
+    ];
+
+    if (NO_FINAL_STATUSES.includes(status)) {
+      await thesis.save();
+
+      return res.status(200).json({
+        message: "Thesis requires revision. No final thesis created.",
+        thesis,
+      });
     }
 
     /**
      * ===============================
-     * CASE 1: If thesis is FINAL
+     * 3️⃣ If already FINAL thesis
      * ===============================
-     * - Only mark as defended
-     * - No new thesis creation
      */
     if (thesis.type === "final") {
-      thesis.defended = true;
       await thesis.save();
 
       return res.status(200).json({
-        message: "Final thesis marked as defended",
+        message: "Final thesis updated",
         thesis,
       });
     }
 
     /**
-     * ===============================
-     * CASE 2: If status is RE-DEFENSE
-     * ===============================
-     * - Mark defended
-     * - Do NOT create final thesis
+     * ==================================
+     * 4️⃣ Only DEFENDED can create FINAL
+     * ==================================
      */
-    if (status === "re-defense") {
-      thesis.defended = true;
+    if (status !== "defended") {
       await thesis.save();
 
       return res.status(200).json({
-        message: "Thesis marked for re-defense. No final thesis created.",
+        message: "Thesis status updated. No final thesis created.",
         thesis,
       });
     }
 
     /**
-     * ===========================================
-     * CASE 3: Check if FINAL thesis already exists
-     * ===========================================
+     * ======================================
+     * 5️⃣ Check if FINAL already exists
+     * ======================================
      */
     const existingFinalThesis = await thesisModel.findOne({
       parentThesisId: thesis._id,
       type: "final",
     });
 
-    // Mark current thesis as defended
-    thesis.defended = true;
     await thesis.save();
 
     if (existingFinalThesis) {
       return res.status(200).json({
-        message:
-          "Thesis defended. Final thesis already exists, no new one created.",
+        message: "Final thesis already exists",
         thesis,
         existingFinalThesis,
       });
@@ -655,25 +669,25 @@ export async function updateThesisToDefended(req, res) {
 
     /**
      * ===============================
-     * CASE 4: Create FINAL thesis
+     * 6️⃣ Create FINAL thesis
      * ===============================
      */
     const newThesis = new thesisModel({
       ...thesis.toObject(),
       _id: new mongoose.Types.ObjectId(),
-      parentThesisId: thesis._id, // ✅ important for tracking versions
-      defended: false,
+      parentThesisId: thesis._id,
+      type: "final",
+      defended: "pending",
+      status: "pending",
       forScheduleStatus: "idle",
       approvalFile: "",
       documentLink: "",
-      panelApprovals: thesis.panelApprovals.map((approval) => ({
-        ...approval,
+      panelApprovals: thesis.panelApprovals.map((p) => ({
+        ...p,
         status: "pending",
       })),
       schedule: null,
       ratingCount: 0,
-      type: "final",
-      status: "pending",
       createdAt: new Date(),
       updatedAt: new Date(),
     });
