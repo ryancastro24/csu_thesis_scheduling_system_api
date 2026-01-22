@@ -101,7 +101,7 @@ export async function approvedProposal(req, res) {
     const updatedApproval = await adviserAcceptanaceModel.findByIdAndUpdate(
       id,
       { status, remarks },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedApproval) {
@@ -116,15 +116,15 @@ export async function approvedProposal(req, res) {
     });
 
     const adviserApproved = approvals.some(
-      (a) => a.role === "adviser" && a.status === "approve"
+      (a) => a.role === "adviser" && a.status === "approve",
     );
 
     const coAdviserApproved = approvals.some(
-      (a) => a.role === "coAdviser" && a.status === "approve"
+      (a) => a.role === "coAdviser" && a.status === "approve",
     );
 
     // 3. If BOTH approved → create thesis
-    if (adviserApproved && coAdviserApproved) {
+    if (adviserApproved || coAdviserApproved) {
       // Prevent duplicate thesis creation
       const existingThesis = await thesisModel.findOne({
         thesisTitle: updatedApproval.proposeTitle,
@@ -173,7 +173,7 @@ export async function changeAdviserRequest(req, res) {
     const updatedRequest = await adviserAcceptanaceModel.findByIdAndUpdate(
       id,
       { adviserId: adviserId, status: "pending" },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedRequest) {
