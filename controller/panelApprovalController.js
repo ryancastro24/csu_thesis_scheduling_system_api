@@ -19,7 +19,7 @@ export async function getUserApproval(req, res) {
 
     console.log(
       "Adviser Acceptance Request Data:",
-      adviserAcceptanceRequestData
+      adviserAcceptanceRequestData,
     );
 
     const userPanelApprovals = await panelApprovalModel
@@ -50,9 +50,8 @@ export async function addPanelRequest(req, res) {
     /* ---------------------------------
        1️⃣ Find adviser acceptance
     ----------------------------------*/
-    const adviserAcceptance = await adviserAcceptanaceModel.findById(
-      proposalId
-    );
+    const adviserAcceptance =
+      await adviserAcceptanaceModel.findById(proposalId);
 
     if (!adviserAcceptance) {
       return res.status(404).json({
@@ -62,7 +61,6 @@ export async function addPanelRequest(req, res) {
 
     /* ---------------------------------
        2️⃣ Extract student IDs
-       (support up to 3 students)
     ----------------------------------*/
     const studentIds = [
       adviserAcceptance.student1Id,
@@ -90,28 +88,41 @@ export async function addPanelRequest(req, res) {
     }
 
     /* ---------------------------------
-       4️⃣ Prepare panel data
+       4️⃣ Build panel list WITH roles
     ----------------------------------*/
-    const panelIds = [faculty1, faculty2, faculty3, faculty4].filter(Boolean);
+    const panelWithRoles = [
+      faculty1 && { panelId: faculty1, role: "panelChairperson" },
+      faculty2 && { panelId: faculty2, role: "panel" },
+      faculty3 && { panelId: faculty3, role: "panel" },
+      faculty4 && { panelId: faculty4, role: "oralSecretary" },
+    ].filter(Boolean);
+
+    if (panelWithRoles.length === 0) {
+      return res.status(400).json({
+        message: "No panel members provided",
+      });
+    }
 
     /* ---------------------------------
        5️⃣ Create panelApproval documents
     ----------------------------------*/
-    const panelRequests = panelIds.map((panelId) => ({
+    const panelRequests = panelWithRoles.map(({ panelId, role }) => ({
       proposalId,
       panelId,
+      role,
       proposeTitle,
       thesisFile: req.file.path,
+      status: "pending",
     }));
 
     await panelApprovalModel.insertMany(panelRequests);
 
     /* ---------------------------------
-       6️⃣ Embedded panel approvals
-       (matches thesis schema)
+       6️⃣ Embedded panel approvals in thesis
     ----------------------------------*/
-    const embeddedPanelApprovals = panelIds.map((panelId) => ({
+    const embeddedPanelApprovals = panelWithRoles.map(({ panelId, role }) => ({
       panel: panelId,
+      role,
       status: "pending",
       remarks: "",
     }));
@@ -119,16 +130,20 @@ export async function addPanelRequest(req, res) {
     /* ---------------------------------
        7️⃣ Update thesis document
     ----------------------------------*/
-    thesis.panels = panelIds;
+    thesis.panels = panelWithRoles.map((p) => p.panelId);
     thesis.panelApprovals = embeddedPanelApprovals;
     thesis.documentLink = req.file.path;
     thesis.status = "pending";
 
     await thesis.save();
 
+    /* ---------------------------------
+       8️⃣ Success response
+    ----------------------------------*/
     return res.status(201).json({
       message: "Panel requests created and thesis updated successfully",
       thesis,
+      panelRequests,
     });
   } catch (error) {
     console.error("Error creating panel requests:", error);
@@ -151,7 +166,7 @@ export async function changePanel(req, res) {
         status: "pending",
         remarks: "",
       }, // update
-      { new: true } // return the updated document
+      { new: true }, // return the updated document
     );
 
     if (!updatedPanel) {
@@ -234,7 +249,7 @@ export async function updatePanelApproval(req, res) {
 
         // Add panel object to panelApprovals[] if not already present
         const isAlreadyInPanelApprovals = thesis.panelApprovals.some(
-          (pa) => pa.panel.toString() === panelApproval.panelId.toString()
+          (pa) => pa.panel.toString() === panelApproval.panelId.toString(),
         );
 
         if (!isAlreadyInPanelApprovals) {
