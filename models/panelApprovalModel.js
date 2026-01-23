@@ -19,10 +19,14 @@ const panelApprovalSchema = mongoose.Schema(
       type: String,
       default: "pending",
     },
+
+    role: {
+      type: String,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.model("panelApprovals", panelApprovalSchema);
