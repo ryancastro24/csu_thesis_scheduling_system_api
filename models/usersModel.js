@@ -8,7 +8,6 @@ const usersSchema = mongoose.Schema(
     },
     middlename: {
       type: String,
-      required: true,
     },
     lastname: {
       type: String,
@@ -62,7 +61,7 @@ const usersSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.model("users", usersSchema);
