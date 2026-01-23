@@ -37,59 +37,39 @@ export async function getUserApproval(req, res) {
 }
 
 export async function addPanelRequest(req, res) {
-  const { faculty1, faculty2, faculty3, faculty4, proposalId, proposeTitle } =
-    req.body;
-
-  console.log("running addPanelRequest");
-
-  if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded." });
-  }
-
   try {
-    /* ---------------------------------
-       1️⃣ Find adviser acceptance
-    ----------------------------------*/
+    console.log("📥 BODY:", req.body);
+    console.log("📎 FILE:", req.file);
+
+    const { faculty1, faculty2, faculty3, faculty4, proposalId, proposeTitle } =
+      req.body;
+
+    if (!proposalId)
+      return res.status(400).json({ message: "proposalId is missing" });
+    if (!req.file)
+      return res.status(400).json({ message: "No file uploaded." });
+
+    // 1️⃣ Find adviser acceptance
     const adviserAcceptance =
       await adviserAcceptanaceModel.findById(proposalId);
+    if (!adviserAcceptance)
+      return res.status(404).json({ message: "Adviser acceptance not found" });
 
-    if (!adviserAcceptance) {
-      return res.status(404).json({
-        message: "Adviser acceptance not found",
-      });
-    }
-
-    /* ---------------------------------
-       2️⃣ Extract student IDs
-    ----------------------------------*/
+    // 2️⃣ Extract student IDs
     const studentIds = [
       adviserAcceptance.student1Id,
       adviserAcceptance.student2Id,
       adviserAcceptance.student3Id,
     ].filter(Boolean);
 
-    if (studentIds.length === 0) {
-      return res.status(400).json({
-        message: "No students found in adviser acceptance",
-      });
-    }
+    // 3️⃣ Find thesis
+    const thesis = await thesisModel.findOne({ students: { $in: studentIds } });
+    if (!thesis)
+      return res
+        .status(404)
+        .json({ message: "No thesis found for the given students" });
 
-    /* ---------------------------------
-       3️⃣ Find thesis by students
-    ----------------------------------*/
-    const thesis = await thesisModel.findOne({
-      students: { $in: studentIds },
-    });
-
-    if (!thesis) {
-      return res.status(404).json({
-        message: "No thesis found for the given students",
-      });
-    }
-
-    /* ---------------------------------
-       4️⃣ Build panel list WITH roles
-    ----------------------------------*/
+    // 4️⃣ Panel with roles
     const panelWithRoles = [
       faculty1 && { panelId: faculty1, role: "panelChairperson" },
       faculty2 && { panelId: faculty2, role: "panel" },
@@ -97,59 +77,42 @@ export async function addPanelRequest(req, res) {
       faculty4 && { panelId: faculty4, role: "oralSecretary" },
     ].filter(Boolean);
 
-    if (panelWithRoles.length === 0) {
-      return res.status(400).json({
-        message: "No panel members provided",
-      });
-    }
+    if (panelWithRoles.length === 0)
+      return res.status(400).json({ message: "No valid panel data provided" });
 
-    /* ---------------------------------
-       5️⃣ Create panelApproval documents
-    ----------------------------------*/
-    const panelRequests = panelWithRoles.map(({ panelId, role }) => ({
-      proposalId,
-      panelId,
-      role,
-      proposeTitle,
-      thesisFile: req.file.path,
-      status: "pending",
-    }));
+    // 5️⃣ Insert approvals
+    await panelApprovalModel.insertMany(
+      panelWithRoles.map(({ panelId, role }) => ({
+        proposalId,
+        panelId,
+        role,
+        proposeTitle,
+        thesisFile: req.file.path,
+      })),
+    );
 
-    await panelApprovalModel.insertMany(panelRequests);
-
-    /* ---------------------------------
-       6️⃣ Embedded panel approvals in thesis
-    ----------------------------------*/
-    const embeddedPanelApprovals = panelWithRoles.map(({ panelId, role }) => ({
-      panel: panelId,
-      role,
+    // 6️⃣ Update thesis
+    thesis.panels = panelWithRoles.map((p) => p.panelId);
+    thesis.panelApprovals = panelWithRoles.map((p) => ({
+      panel: p.panelId,
       status: "pending",
       remarks: "",
     }));
-
-    /* ---------------------------------
-       7️⃣ Update thesis document
-    ----------------------------------*/
-    thesis.panels = panelWithRoles.map((p) => p.panelId);
-    thesis.panelApprovals = embeddedPanelApprovals;
     thesis.documentLink = req.file.path;
     thesis.status = "pending";
 
     await thesis.save();
 
-    /* ---------------------------------
-       8️⃣ Success response
-    ----------------------------------*/
-    return res.status(201).json({
-      message: "Panel requests created and thesis updated successfully",
-      thesis,
-      panelRequests,
-    });
+    return res
+      .status(201)
+      .json({ message: "Panel requests created successfully" });
   } catch (error) {
-    console.error("Error creating panel requests:", error);
-    return res.status(500).json({
-      message: "Failed to create panel requests",
-    });
+    console.error("🔥 ERROR NAME:", error.name);
+    console.error("🔥 ERROR MESSAGE:", error.message);
+    console.error("🔥 FULL ERROR:", error);
+    return res
+      .status(500)
+      .console({ message: "Server error", error: error.message });
   }
 }
 
