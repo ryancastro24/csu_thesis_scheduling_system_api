@@ -93,17 +93,17 @@ const thesisDocumentsSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Middleware to update status based on panel approvals
 thesisDocumentsSchema.pre("save", function (next) {
   if (this.panelApprovals.length > 0) {
     const allApproved = this.panelApprovals.every(
-      (approval) => approval.status === "approved"
+      (approval) => approval.status === "approved",
     );
     const anyRejected = this.panelApprovals.some(
-      (approval) => approval.status === "rejected"
+      (approval) => approval.status === "rejected",
     );
   }
   next();

@@ -53,7 +53,7 @@ router.route("/").get(getAllPendingThesis);
 router.get("/specificThesisModel/data/:panelId", getThesisByPanel);
 router.get(
   "/specificApprovedThesisModel/data/:panelId",
-  getApprovedThesisByPanel
+  getApprovedThesisByPanel,
 );
 
 router.get("/getAllApprovedThesis/data", getAllThesis);
@@ -63,7 +63,7 @@ router.delete("/:id", deleteCase);
 router.put("/rescheduleThesisSchedule/thesis/:id", updateThesisSchedule);
 router.put(
   "/updateThesisScheduleApprovalData/thesis/:id",
-  updateThesisScheduleApproval
+  updateThesisScheduleApproval,
 );
 router.put("/thesis/:thesisId/panelApproval/:panelId", updatePanelApproval);
 router.post(
@@ -72,7 +72,7 @@ router.post(
     { name: "thesisFile", maxCount: 1 },
     { name: "approvalFile", maxCount: 1 },
   ]),
-  createThesisDocument
+  createThesisDocument,
 );
 
 router.post(
@@ -81,7 +81,7 @@ router.post(
     { name: "thesisFile", maxCount: 1 },
     { name: "approvalFile", maxCount: 1 },
   ]),
-  createFinalThesisDocument
+  createFinalThesisDocument,
 );
 
 router.get("/getThesisByAdviserData/data/:adviserId", getThesisByAdviser);

@@ -33,11 +33,11 @@ export async function updateThesisSchedule(req, res) {
         time,
         eventType: thesis.thesisTitle,
         userId,
-      }))
+      })),
     );
 
     const adminSchedule = schedules.find(
-      (schedule) => schedule.userId.toString() === adminId.toString()
+      (schedule) => schedule.userId.toString() === adminId.toString(),
     );
 
     if (!adminSchedule) {
@@ -61,7 +61,7 @@ export async function updateThesisSchedule(req, res) {
         schedule: adminSchedule._id,
         venue: venue,
       },
-      { new: true }
+      { new: true },
     );
 
     // Create notifications for all panels
@@ -149,15 +149,15 @@ export async function getAllPendingThesis(req, res) {
     const filteredTheses = thesisDocumentsData.filter((thesis) =>
       thesis.students.some(
         (student) =>
-          student.departmentId && student.departmentId.acronym === department
-      )
+          student.departmentId && student.departmentId.acronym === department,
+      ),
     );
 
     // Update statuses based on approvals
     await Promise.all(
       filteredTheses.map(async (thesis) => {
         const allApproved = thesis.panelApprovals.every(
-          (approval) => approval.status === "approve"
+          (approval) => approval.status === "approve",
         );
 
         if (allApproved) {
@@ -173,7 +173,7 @@ export async function getAllPendingThesis(req, res) {
             eventType: thesis.thesisTitle,
           });
         }
-      })
+      }),
     );
 
     res.status(200).json(filteredTheses);
@@ -205,11 +205,11 @@ export async function getFinalAllThesisDocument(req, res) {
 
       if (thesisObj.panelApprovals?.length) {
         const allApproved = thesisObj.panelApprovals.every(
-          (approval) => approval.status === "approve"
+          (approval) => approval.status === "approve",
         );
 
         const anyRejected = thesisObj.panelApprovals.some(
-          (approval) => approval.status === "reject"
+          (approval) => approval.status === "reject",
         );
 
         if (allApproved) {
@@ -250,11 +250,11 @@ export async function getAllThesisDocument(req, res) {
 
       if (thesisObj.panelApprovals?.length) {
         const allApproved = thesisObj.panelApprovals.every(
-          (approval) => approval.status === "approve"
+          (approval) => approval.status === "approve",
         );
 
         const anyRejected = thesisObj.panelApprovals.some(
-          (approval) => approval.status === "reject"
+          (approval) => approval.status === "reject",
         );
 
         if (allApproved) {
@@ -306,42 +306,58 @@ export async function getThesisByPanel(req, res) {
 
 export async function updatePanelApproval(req, res) {
   try {
-    const { thesisId, panelId } = req.params; // Get thesis & panel ID from request params
-    const { status, remarks } = req.body; // Get new status & remarks from request body
+    const { thesisId, panelId } = req.params;
+    const { status, remarks } = req.body;
 
-    // Find & Update the panelApproval status for the specific panel
+    // Build update object dynamically
+    const updateFields = {
+      "panelApprovals.$.status": status,
+    };
+
+    // Only update remarks if provided
+    if (remarks && remarks.trim() !== "") {
+      updateFields["panelApprovals.$.remarks"] = remarks;
+    }
+
     const updatedThesis = await thesisModel.findOneAndUpdate(
       {
-        _id: thesisId, // Find thesis by ID
-        "panelApprovals.panel": panelId, // Find the specific panel in panelApprovals
+        _id: thesisId,
+        "panelApprovals.panel": panelId,
       },
       {
-        $set: {
-          "panelApprovals.$.status": status, // Update only the matched panel's status
-          "panelApprovals.$.remarks": remarks, // Update remarks (optional)
-        },
+        $set: updateFields,
       },
-      { new: true } // Return updated document
+      { new: true },
     );
 
     if (!updatedThesis) {
       return res.status(404).json({ message: "Thesis or Panel not found" });
     }
 
-    const newNotification = new notification({
-      thesisId: thesisId,
+    // Create notification (remarks optional)
+    const notificationData = {
+      thesisId,
       userId: panelId,
-      remarks: remarks,
-      status: status,
-    });
-    const savedNotification = await newNotification.save();
+      status,
+    };
 
-    res
-      .status(200)
-      .json({ message: "Panel approval updated successfully", updatedThesis });
+    if (remarks && remarks.trim() !== "") {
+      notificationData.remarks = remarks;
+    }
+
+    const newNotification = new notification(notificationData);
+    await newNotification.save();
+
+    res.status(200).json({
+      message: "Panel approval updated successfully",
+      updatedThesis,
+    });
   } catch (error) {
     console.error("Error updating panel approval:", error);
-    res.status(500).json({ message: "Error updating panel approval", error });
+    res.status(500).json({
+      message: "Error updating panel approval",
+      error,
+    });
   }
 }
 
@@ -399,7 +415,7 @@ export async function getApprovedThesisByPanel(req, res) {
     await Promise.all(
       thesisDocumentsData.map(async (thesis) => {
         const allApproved = thesis.panelApprovals.every(
-          (approval) => approval.status === "approve"
+          (approval) => approval.status === "approve",
         );
 
         if (allApproved) {
@@ -414,7 +430,7 @@ export async function getApprovedThesisByPanel(req, res) {
             eventType: thesis.thesisTitle,
           });
         }
-      })
+      }),
     );
 
     res.status(200).json(thesisDocumentsData);
@@ -455,7 +471,7 @@ export async function createThesisDocument(req, res) {
         approvalFile: approvalFile.path,
         forScheduleStatus: "pending",
       },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedThesis) {
@@ -499,7 +515,7 @@ export async function createFinalThesisDocument(req, res) {
         approvalFile: approvalFile.path,
         forScheduleStatus: "pending",
       },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedThesis) {
@@ -546,7 +562,7 @@ export async function updateThesisScheduleApproval(req, res) {
     const updatedThesis = await thesisModel.findOneAndUpdate(
       { _id: id }, // filter
       { forScheduleStatus: forScheduleStatus }, // update
-      { new: true } // return the updated document
+      { new: true }, // return the updated document
     );
 
     if (!updatedThesis) {
