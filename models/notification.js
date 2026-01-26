@@ -8,7 +8,6 @@ const notificationSchema = mongoose.Schema(
     },
     remarks: {
       type: String, // Example: "10:00 AM - 12:00 PM"
-      required: true,
     },
 
     read: {
@@ -30,7 +29,7 @@ const notificationSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.model("notifications", notificationSchema);
