@@ -12,10 +12,13 @@ export async function updateThesisSchedule(req, res) {
 
     // Find the thesis document
     const thesis = await thesisModel.findById(id);
+
     if (!thesis) {
       return res.status(404).json({ message: "Thesis document not found" });
     }
 
+    thesis.reschedule = false;
+    tehsis.status = "pending";
     // Get all users involved in the thesis
     const adminId = thesis.adviser; // Using adviser as admin for this case
     const scheduleUsers = [
