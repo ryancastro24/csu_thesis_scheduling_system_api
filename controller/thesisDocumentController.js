@@ -623,10 +623,11 @@ export async function updateThesisToDefended(req, res) {
     if (status === "re-defense") {
       thesis.schedule = null;
 
+      thesis.status = "rejected";
+      thesis.reschedule = true;
       thesis.panelApprovals = thesis.panelApprovals.map((p) => ({
         ...p.toObject(),
-        status: "rejected",
-        reschedule: true,
+        status: "pending",
       }));
 
       await thesis.save();
