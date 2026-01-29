@@ -18,7 +18,7 @@ export async function updateThesisSchedule(req, res) {
     }
 
     thesis.reschedule = false;
-    tehsis.status = "pending";
+    thesis.status = "pending";
     // Get all users involved in the thesis
     const adminId = thesis.adviser; // Using adviser as admin for this case
     const scheduleUsers = [
