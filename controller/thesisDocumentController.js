@@ -625,7 +625,8 @@ export async function updateThesisToDefended(req, res) {
 
       thesis.panelApprovals = thesis.panelApprovals.map((p) => ({
         ...p.toObject(),
-        status: "pending",
+        status: "rejected",
+        reschedule: true,
       }));
 
       await thesis.save();
