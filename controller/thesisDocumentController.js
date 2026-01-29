@@ -598,7 +598,7 @@ export async function getThesisByAdviser(req, res) {
 export async function updateThesisToDefended(req, res) {
   try {
     const { id } = req.params;
-    const { status } = req.body; // 👈 incoming value
+    const { status } = req.body;
 
     const thesis = await thesisModel.findById(id);
 
@@ -617,14 +617,32 @@ export async function updateThesisToDefended(req, res) {
 
     /**
      * =====================================
+     * 🔁 SPECIAL CASE: RE-DEFENSE
+     * =====================================
+     */
+    if (status === "re-defense") {
+      thesis.schedule = null;
+
+      thesis.panelApprovals = thesis.panelApprovals.map((p) => ({
+        ...p.toObject(),
+        status: "pending",
+      }));
+
+      await thesis.save();
+
+      return res.status(200).json({
+        message:
+          "Thesis marked for re-defense. Schedule cleared and panel approvals reset.",
+        thesis,
+      });
+    }
+
+    /**
+     * =====================================
      * 2️⃣ These statuses NEVER create FINAL
      * =====================================
      */
-    const NO_FINAL_STATUSES = [
-      "minor revision",
-      "major revision",
-      "re-defense",
-    ];
+    const NO_FINAL_STATUSES = ["minor revision", "major revision"];
 
     if (NO_FINAL_STATUSES.includes(status)) {
       await thesis.save();
