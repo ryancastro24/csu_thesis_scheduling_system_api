@@ -62,6 +62,7 @@ export async function updateThesisSchedule(req, res) {
         schedule: adminSchedule._id,
         venue: venue,
         reschedule: false,
+        status: "pending",
       },
       { new: true },
     );
