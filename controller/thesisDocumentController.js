@@ -625,8 +625,8 @@ export async function updateThesisToDefended(req, res) {
      */
     if (status === "re-defense") {
       thesis.schedule = null;
-
-      thesis.status = "rejected";
+      thesis.status = "pending";
+      thesis.defended = "pending";
       thesis.reschedule = true;
       thesis.panelApprovals = thesis.panelApprovals.map((p) => ({
         ...p.toObject(),
