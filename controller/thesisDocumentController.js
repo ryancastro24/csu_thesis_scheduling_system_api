@@ -17,8 +17,6 @@ export async function updateThesisSchedule(req, res) {
       return res.status(404).json({ message: "Thesis document not found" });
     }
 
-    thesis.reschedule = false;
-    thesis.status = "pending";
     // Get all users involved in the thesis
     const adminId = thesis.adviser; // Using adviser as admin for this case
     const scheduleUsers = [
@@ -63,6 +61,7 @@ export async function updateThesisSchedule(req, res) {
         panelApprovals: updatedPanelApprovals,
         schedule: adminSchedule._id,
         venue: venue,
+        reschedule: false,
       },
       { new: true },
     );
