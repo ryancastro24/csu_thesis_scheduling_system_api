@@ -696,6 +696,8 @@ export async function updateThesisToDefended(req, res) {
       type: "final",
     });
 
+    thesis.defended = true;
+
     await thesis.save();
 
     if (existingFinalThesis) {
