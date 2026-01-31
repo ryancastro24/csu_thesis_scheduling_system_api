@@ -68,8 +68,14 @@ const thesisDocumentsSchema = new mongoose.Schema(
     },
 
     defended: {
+      type: Boolean,
+      default: false,
+    },
+
+    thesisFinalStatus: {
       type: String,
-      default: "pending", // Default value set to false
+      enum: ["defended", "minor revision", "redefense", "majorrevision"],
+      default: "pending",
     },
     forSchedule: {
       type: Boolean,

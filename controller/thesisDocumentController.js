@@ -615,7 +615,7 @@ export async function updateThesisToDefended(req, res) {
      * ===============================
      */
     if (status) {
-      thesis.defended = status;
+      thesis.thesisFinalStatus = status;
     }
 
     /**
@@ -623,10 +623,11 @@ export async function updateThesisToDefended(req, res) {
      * 🔁 SPECIAL CASE: RE-DEFENSE
      * =====================================
      */
-    if (status === "re-defense") {
+    if (status === "redefense") {
       thesis.schedule = null;
       thesis.status = "pending";
-      thesis.defended = "pending";
+      thesis.defended = false;
+      thesis.thesisFinalStatus = status;
       thesis.reschedule = true;
       thesis.panelApprovals = thesis.panelApprovals.map((p) => ({
         ...p.toObject(),
@@ -647,16 +648,16 @@ export async function updateThesisToDefended(req, res) {
      * 2️⃣ These statuses NEVER create FINAL
      * =====================================
      */
-    const NO_FINAL_STATUSES = ["minor revision", "major revision"];
+    // const NO_FINAL_STATUSES = ["minor revision", "major revision"];
 
-    if (NO_FINAL_STATUSES.includes(status)) {
-      await thesis.save();
+    // if (NO_FINAL_STATUSES.includes(status)) {
+    //   await thesis.save();
 
-      return res.status(200).json({
-        message: "Thesis requires revision. No final thesis created.",
-        thesis,
-      });
-    }
+    //   return res.status(200).json({
+    //     message: "Thesis requires revision. No final thesis created.",
+    //     thesis,
+    //   });
+    // }
 
     /**
      * ===============================
@@ -677,14 +678,14 @@ export async function updateThesisToDefended(req, res) {
      * 4️⃣ Only DEFENDED can create FINAL
      * ==================================
      */
-    if (status !== "defended") {
-      await thesis.save();
+    // if (status !== "defended") {
+    //   await thesis.save();
 
-      return res.status(200).json({
-        message: "Thesis status updated. No final thesis created.",
-        thesis,
-      });
-    }
+    //   return res.status(200).json({
+    //     message: "Thesis status updated. No final thesis created.",
+    //     thesis,
+    //   });
+    // }
 
     /**
      * ======================================
@@ -716,7 +717,7 @@ export async function updateThesisToDefended(req, res) {
       _id: new mongoose.Types.ObjectId(),
       parentThesisId: thesis._id,
       type: "final",
-      defended: "pending",
+      defended: false,
       status: "pending",
       forScheduleStatus: "idle",
       approvalFile: "",
