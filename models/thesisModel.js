@@ -78,7 +78,7 @@ const thesisDocumentsSchema = new mongoose.Schema(
         "defended",
         "minor revision",
         "redefense",
-        "majorrevision",
+        "major revision",
         "pending",
       ],
       default: "pending",
