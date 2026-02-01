@@ -98,7 +98,7 @@ export async function approvedProposal(req, res) {
   const { id } = req.params;
 
   try {
-    // 1. Update the current approval record
+    // 1. Update current approval
     const updatedApproval = await adviserAcceptanaceModel.findByIdAndUpdate(
       id,
       { status, remarks },
@@ -106,10 +106,12 @@ export async function approvedProposal(req, res) {
     );
 
     if (!updatedApproval) {
-      return res.status(404).json({ message: "Approval record not found" });
+      return res.status(404).json({
+        message: "Approval record not found",
+      });
     }
 
-    // 2. Fetch adviser & co-adviser approvals for the same proposal
+    // 2. Fetch adviser & co-adviser approvals
     const approvals = await adviserAcceptanaceModel.find({
       student1Id: updatedApproval.student1Id,
       proposeTitle: updatedApproval.proposeTitle,
@@ -120,10 +122,14 @@ export async function approvedProposal(req, res) {
     const coAdviserRecord = approvals.find((a) => a.role === "coAdviser");
 
     const adviserApproved = adviserRecord?.status === "approve";
+    const coAdviserExists = !!coAdviserRecord;
     const coAdviserApproved = coAdviserRecord?.status === "approve";
 
-    // 3. If BOTH approved → create thesis
-    if (adviserApproved && coAdviserApproved) {
+    // 3. Adviser required, co-adviser optional
+    const canCreateThesis =
+      adviserApproved && (!coAdviserExists || coAdviserApproved);
+
+    if (canCreateThesis) {
       const existingThesis = await thesisModel.findOne({
         thesisTitle: updatedApproval.proposeTitle,
         students: updatedApproval.student1Id,
@@ -138,29 +144,33 @@ export async function approvedProposal(req, res) {
           ].filter(Boolean),
           thesisTitle: adviserRecord.proposeTitle,
           adviser: adviserRecord.adviserId,
-          coAdviser: adviserRecord.coAdviserId,
+          coAdviser: adviserRecord.coAdviserId || null,
           type: "proposal",
         });
 
         return res.status(200).json({
-          message: "Both adviser and co-adviser approved. Thesis created.",
+          message: "Thesis created successfully.",
           thesisModelData,
         });
       }
 
       return res.status(200).json({
-        message: "Both approved. Thesis already exists.",
+        message: "Thesis already exists.",
       });
     }
 
-    // 4. Only one has approved so far
+    // 4. Waiting for required approvals
     return res.status(200).json({
-      message: "Proposal status updated. Waiting for other approval.",
+      message: coAdviserExists
+        ? "Waiting for other approval."
+        : "Waiting for adviser approval.",
       updatedApproval,
     });
   } catch (error) {
     console.error("Error approving proposal:", error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({
+      error: error.message,
+    });
   }
 }
 
