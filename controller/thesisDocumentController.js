@@ -322,6 +322,10 @@ export async function updatePanelApproval(req, res) {
       updateFields["panelApprovals.$.remarks"] = remarks;
     }
 
+    if (status === "reject") {
+      updateFields["reschedule"] = true;
+    }
+
     const updatedThesis = await thesisModel.findOneAndUpdate(
       {
         _id: thesisId,
