@@ -668,6 +668,7 @@ export async function updateThesisToDefended(req, res) {
      * ===============================
      */
     if (thesis.type === "final") {
+      thesis.thesisFinalStatus = status;
       await thesis.save();
 
       return res.status(200).json({
