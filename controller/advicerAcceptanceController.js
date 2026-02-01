@@ -92,12 +92,13 @@ export async function getAdviserAcceptanceRequest(req, res) {
   return res.status(200).send(adviserAcceptanceRequestData);
 }
 
+// approve proposal function
 export async function approvedProposal(req, res) {
   const { status, remarks } = req.body;
   const { id } = req.params;
 
   try {
-    // 1. Update the current approval record (adviser OR co-adviser)
+    // 1. Update the current approval record
     const updatedApproval = await adviserAcceptanaceModel.findByIdAndUpdate(
       id,
       { status, remarks },
@@ -108,32 +109,27 @@ export async function approvedProposal(req, res) {
       return res.status(404).json({ message: "Approval record not found" });
     }
 
-    // 2. Fetch BOTH adviser & co-adviser records for the same proposal
+    // 2. Fetch adviser & co-adviser approvals for the same proposal
     const approvals = await adviserAcceptanaceModel.find({
       student1Id: updatedApproval.student1Id,
       proposeTitle: updatedApproval.proposeTitle,
       role: { $in: ["adviser", "coAdviser"] },
     });
 
-    const adviserApproved = approvals.some(
-      (a) => a.role === "adviser" && a.status === "approve",
-    );
+    const adviserRecord = approvals.find((a) => a.role === "adviser");
+    const coAdviserRecord = approvals.find((a) => a.role === "coAdviser");
 
-    const coAdviserApproved = approvals.some(
-      (a) => a.role === "coAdviser" && a.status === "approve",
-    );
+    const adviserApproved = adviserRecord?.status === "approve";
+    const coAdviserApproved = coAdviserRecord?.status === "approve";
 
     // 3. If BOTH approved → create thesis
-    if (adviserApproved || coAdviserApproved) {
-      // Prevent duplicate thesis creation
+    if (adviserApproved && coAdviserApproved) {
       const existingThesis = await thesisModel.findOne({
         thesisTitle: updatedApproval.proposeTitle,
         students: updatedApproval.student1Id,
       });
 
       if (!existingThesis) {
-        const adviserRecord = approvals.find((a) => a.role === "adviser");
-
         const thesisModelData = await thesisModel.create({
           students: [
             adviserRecord.student1Id,
@@ -151,16 +147,20 @@ export async function approvedProposal(req, res) {
           thesisModelData,
         });
       }
+
+      return res.status(200).json({
+        message: "Both approved. Thesis already exists.",
+      });
     }
 
-    // 4. Default response (only one has approved so far)
+    // 4. Only one has approved so far
     return res.status(200).json({
       message: "Proposal status updated. Waiting for other approval.",
       updatedApproval,
     });
   } catch (error) {
     console.error("Error approving proposal:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: error.message });
   }
 }
 
