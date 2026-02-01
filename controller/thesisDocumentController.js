@@ -631,7 +631,12 @@ export async function updateThesisToDefended(req, res) {
       thesis.status = "pending";
       thesis.defended = false;
       thesis.thesisFinalStatus = status;
+      thesis.reschedule = true;
       thesis.forScheduleStatus = "idle";
+      thesis.panelApprovals = thesis.panelApprovals.map((p) => ({
+        ...p.toObject(),
+        status: "pending",
+      }));
 
       await thesis.save();
 
