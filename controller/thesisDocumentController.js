@@ -322,7 +322,7 @@ export async function updatePanelApproval(req, res) {
       updateFields["panelApprovals.$.remarks"] = remarks;
     }
 
-    if (status === "reject") {
+    if (status === "rejected") {
       updateFields["reschedule"] = true;
     }
 
