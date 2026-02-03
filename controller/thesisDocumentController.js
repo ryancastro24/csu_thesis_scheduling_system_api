@@ -726,6 +726,7 @@ export async function updateThesisToDefended(req, res) {
       defended: false,
       status: "pending",
       forScheduleStatus: "idle",
+      thesisFinalStatus: "pending",
       approvalFile: "",
       documentLink: "",
       panelApprovals: thesis.panelApprovals.map((p) => ({
