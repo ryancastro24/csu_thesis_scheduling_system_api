@@ -25,6 +25,11 @@ const thesisDocumentsSchema = new mongoose.Schema(
       ref: "users", // Reference to users (advisers)
     },
 
+    coAdviser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "users", // Reference to users (co_advisers)
+    },
+
     panels: [
       {
         type: mongoose.Schema.Types.ObjectId,
