@@ -22,6 +22,7 @@ export async function updateThesisSchedule(req, res) {
     const scheduleUsers = [
       ...(thesis.students || []).filter(Boolean), // remove null/undefined students
       thesis.adviser,
+      thesis.coAdviser,
       ...(thesis.panels || []),
     ].filter(Boolean); // also ensure a
     // Delete existing schedules
