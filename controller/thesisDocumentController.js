@@ -666,7 +666,7 @@ export async function updateThesisToDefended(req, res) {
      * ======================================
      */
     if (thesis.type === "final") {
-      thesis.defended = status === "defended";
+      thesis.defended = FINAL_TRIGGER_STATUSES.includes(status);
       await thesis.save();
 
       return res.status(200).json({
@@ -675,11 +675,6 @@ export async function updateThesisToDefended(req, res) {
       });
     }
 
-    /**
-     * ======================================
-     * 4️⃣ Check if FINAL already exists
-     * ======================================
-     */
     /**
      * ======================================
      * 4️⃣ Check if FINAL already exists
