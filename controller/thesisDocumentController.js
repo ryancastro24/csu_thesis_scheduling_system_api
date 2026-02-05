@@ -603,9 +603,6 @@ export async function getThesisByAdviser(req, res) {
   }
 }
 
-import mongoose from "mongoose";
-import thesisModel from "../models/thesisModel.js";
-
 export async function updateThesisToDefended(req, res) {
   try {
     const { id } = req.params;
