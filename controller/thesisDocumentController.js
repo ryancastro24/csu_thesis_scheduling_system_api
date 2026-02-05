@@ -603,6 +603,9 @@ export async function getThesisByAdviser(req, res) {
   }
 }
 
+import mongoose from "mongoose";
+import thesisModel from "../models/thesisModel.js";
+
 export async function updateThesisToDefended(req, res) {
   try {
     const { id } = req.params;
@@ -616,12 +619,13 @@ export async function updateThesisToDefended(req, res) {
 
     /**
      * ===============================
-     * 1️⃣ Map status → defended field
+     * 1️⃣ Update thesis final status
      * ===============================
      */
     if (status) {
       thesis.thesisFinalStatus = status;
     }
+
     /**
      * =====================================
      * 🔁 SPECIAL CASE: RE-DEFENSE
@@ -631,8 +635,9 @@ export async function updateThesisToDefended(req, res) {
       thesis.schedule = null;
       thesis.status = "pending";
       thesis.defended = false;
-      thesis.thesisFinalStatus = status;
       thesis.forScheduleStatus = "pending";
+      thesis.thesisFinalStatus = status;
+
       thesis.panelApprovals = thesis.panelApprovals.map((p) => ({
         ...p.toObject(),
         status: "pending",
@@ -648,28 +653,23 @@ export async function updateThesisToDefended(req, res) {
     }
 
     /**
-     * =====================================
-     * 2️⃣ These statuses NEVER create FINAL
-     * =====================================
+     * ======================================
+     * 2️⃣ Statuses that can create FINAL
+     * ======================================
      */
-    // const NO_FINAL_STATUSES = ["minor revision", "major revision"];
-
-    // if (NO_FINAL_STATUSES.includes(status)) {
-    //   await thesis.save();
-
-    //   return res.status(200).json({
-    //     message: "Thesis requires revision. No final thesis created.",
-    //     thesis,
-    //   });
-    // }
+    const FINAL_TRIGGER_STATUSES = [
+      "defended",
+      "minor revision",
+      "major revision",
+    ];
 
     /**
-     * ===============================
-     * 3️⃣ If already FINAL thesis
-     * ===============================
+     * ======================================
+     * 3️⃣ If this is already a FINAL thesis
+     * ======================================
      */
     if (thesis.type === "final") {
-      thesis.defended = true;
+      thesis.defended = status === "defended";
       await thesis.save();
 
       return res.status(200).json({
@@ -679,22 +679,8 @@ export async function updateThesisToDefended(req, res) {
     }
 
     /**
-     * ==================================
-     * 4️⃣ Only DEFENDED can create FINAL
-     * ==================================
-     */
-    // if (status !== "defended") {
-    //   await thesis.save();
-
-    //   return res.status(200).json({
-    //     message: "Thesis status updated. No final thesis created.",
-    //     thesis,
-    //   });
-    // }
-
-    /**
      * ======================================
-     * 5️⃣ Check if FINAL already exists
+     * 4️⃣ Check if FINAL already exists
      * ======================================
      */
     const existingFinalThesis = await thesisModel.findOne({
@@ -702,50 +688,68 @@ export async function updateThesisToDefended(req, res) {
       type: "final",
     });
 
-    thesis.defended = true;
+    /**
+     * ======================================
+     * 5️⃣ Update proposal thesis
+     * ======================================
+     */
+    if (FINAL_TRIGGER_STATUSES.includes(status)) {
+      thesis.defended = status === "defended";
+    }
 
     await thesis.save();
 
-    if (existingFinalThesis) {
+    /**
+     * ======================================
+     * 6️⃣ Create FINAL thesis (ONLY ONCE)
+     * ======================================
+     */
+    if (!existingFinalThesis && FINAL_TRIGGER_STATUSES.includes(status)) {
+      const finalThesis = new thesisModel({
+        ...thesis.toObject(),
+        _id: new mongoose.Types.ObjectId(),
+
+        parentThesisId: thesis._id,
+        type: "final",
+
+        // reset FINAL thesis state
+        defended: false,
+        status: "pending",
+        forScheduleStatus: "idle",
+        thesisFinalStatus: "pending",
+
+        approvalFile: "",
+        documentLink: "",
+        schedule: null,
+        ratingCount: 0,
+
+        panelApprovals: thesis.panelApprovals.map((p) => ({
+          ...p.toObject(),
+          status: "pending",
+        })),
+
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await finalThesis.save();
+
       return res.status(200).json({
-        message: "Final thesis already exists",
-        thesis,
-        existingFinalThesis,
+        message: "Final thesis created from proposal",
+        proposalThesis: thesis,
+        finalThesis,
       });
     }
 
     /**
-     * ===============================
-     * 6️⃣ Create FINAL thesis
-     * ===============================
+     * ======================================
+     * 7️⃣ FINAL already exists → no creation
+     * ======================================
      */
-    const newThesis = new thesisModel({
-      ...thesis.toObject(),
-      _id: new mongoose.Types.ObjectId(),
-      parentThesisId: thesis._id,
-      type: "final",
-      defended: false,
-      status: "pending",
-      forScheduleStatus: "idle",
-      thesisFinalStatus: "pending",
-      approvalFile: "",
-      documentLink: "",
-      panelApprovals: thesis.panelApprovals.map((p) => ({
-        ...p,
-        status: "pending",
-      })),
-      schedule: null,
-      ratingCount: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    await newThesis.save();
-
     return res.status(200).json({
-      message: "Thesis defended and final thesis created",
-      originalThesis: thesis,
-      newThesis,
+      message: "Thesis status updated. Final thesis already exists.",
+      proposalThesis: thesis,
+      existingFinalThesis,
     });
   } catch (error) {
     return res.status(500).json({
