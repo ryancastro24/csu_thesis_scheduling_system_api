@@ -112,10 +112,20 @@ thesisDocumentsSchema.pre("save", function (next) {
     const allApproved = this.panelApprovals.every(
       (approval) => approval.status === "approved",
     );
+
     const anyRejected = this.panelApprovals.some(
       (approval) => approval.status === "rejected",
     );
+
+    if (anyRejected) {
+      this.status = "rejected";
+    } else if (allApproved) {
+      this.status = "approved";
+    } else {
+      this.status = "pending";
+    }
   }
+
   next();
 });
 
