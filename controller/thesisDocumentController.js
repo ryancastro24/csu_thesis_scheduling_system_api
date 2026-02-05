@@ -680,8 +680,13 @@ export async function updateThesisToDefended(req, res) {
      * 4️⃣ Check if FINAL already exists
      * ======================================
      */
+    /**
+     * ======================================
+     * 4️⃣ Check if FINAL already exists
+     * ======================================
+     */
     const existingFinalThesis = await thesisModel.findOne({
-      parentThesisId: thesis._id,
+      thesisTitle: thesis.thesisTitle,
       type: "final",
     });
 
