@@ -696,7 +696,7 @@ export async function updateThesisToDefended(req, res) {
      * ======================================
      */
     if (FINAL_TRIGGER_STATUSES.includes(status)) {
-      thesis.defended = status === "defended";
+      thesis.defended = FINAL_TRIGGER_STATUSES.includes(status);
     }
 
     await thesis.save();
