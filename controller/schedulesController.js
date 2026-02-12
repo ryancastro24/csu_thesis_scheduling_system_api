@@ -237,21 +237,36 @@ export async function getUsersSchedules(req, res) {
 
 export async function deleteUserSchedule(req, res) {
   const { id } = req.params;
-  try {
-    const deletedUserSchedule = await schedulesModel.findByIdAndDelete(id);
 
-    if (!deletedUserSchedule) {
+  try {
+    // 1️⃣ Find the schedule first
+    const schedule = await schedulesModel.findById(id);
+
+    if (!schedule) {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
+    const { date, time, eventType } = schedule;
+
+    // 2️⃣ Delete all schedules with same date, time, and eventType
+    const deletedSchedules = await schedulesModel.deleteMany({
+      date,
+      time,
+      eventType,
+    });
+
     return res.status(200).json({
-      message: "Schedule successfully deleted",
-      data: deletedUserSchedule,
+      message: "Schedules successfully deleted",
+      deletedCount: deletedSchedules.deletedCount,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error deleting schedule", error });
+    return res.status(500).json({
+      message: "Error deleting schedules",
+      error: error.message,
+    });
   }
 }
+
 export async function verifyScheduleConflict(req, res) {
   const { date, time, panel1, panel2, panel3, panel4 } = req.body;
   const panelIds = [panel1, panel2, panel3, panel4];
