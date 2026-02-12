@@ -306,32 +306,53 @@ export async function verifyScheduleConflict(req, res) {
 }
 
 export async function updateSchedule(req, res) {
-  const { id } = req.params; // Get schedule ID from request params
-  const { eventType, time } = req.body; // Get new event type, date, and time from request body
+  const { id } = req.params;
+  const { eventType, time, date } = req.body;
 
   try {
-    // Ensure the ID is a valid ObjectId
+    // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid schedule ID" });
     }
 
-    // Update only the eventType, date, and time fields
-    const updatedSchedule = await schedulesModel.findByIdAndUpdate(
-      id,
-      { eventType, time },
-      { new: true, fields: { eventType: 1, time: 1 } }, // Return only updated fields
-    );
+    // 1️⃣ Find the original schedule first
+    const existingSchedule = await schedulesModel.findById(id);
 
-    if (!updatedSchedule) {
+    if (!existingSchedule) {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
-    res.status(200).json({
-      message: "Schedule updated successfully",
-      data: updatedSchedule,
+    const {
+      eventType: oldEventType,
+      time: oldTime,
+      date: oldDate,
+    } = existingSchedule;
+
+    // 2️⃣ Update ALL schedules with same date, time, eventType
+    const updatedResult = await schedulesModel.updateMany(
+      {
+        eventType: oldEventType,
+        time: oldTime,
+        date: oldDate,
+      },
+      {
+        $set: {
+          eventType: eventType ?? oldEventType,
+          time: time ?? oldTime,
+          date: date ?? oldDate,
+        },
+      },
+    );
+
+    return res.status(200).json({
+      message: "Schedules updated successfully",
+      modifiedCount: updatedResult.modifiedCount,
     });
   } catch (error) {
-    console.error("Error updating schedule:", error);
-    res.status(500).json({ message: "Error updating schedule", error });
+    console.error("Error updating schedules:", error);
+    return res.status(500).json({
+      message: "Error updating schedules",
+      error: error.message,
+    });
   }
 }
