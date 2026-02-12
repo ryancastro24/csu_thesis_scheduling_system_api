@@ -179,7 +179,7 @@ export const generateSchedule = async (req, res) => {
             finalSlots.push({
               date,
               time: `${formatTo12Hour(slot.start)} - ${formatTo12Hour(
-                slot.end
+                slot.end,
               )}`,
             });
           }
@@ -292,7 +292,7 @@ export async function verifyScheduleConflict(req, res) {
 
 export async function updateSchedule(req, res) {
   const { id } = req.params; // Get schedule ID from request params
-  const { eventType, date, time } = req.body; // Get new event type, date, and time from request body
+  const { eventType, time } = req.body; // Get new event type, date, and time from request body
 
   try {
     // Ensure the ID is a valid ObjectId
@@ -303,8 +303,8 @@ export async function updateSchedule(req, res) {
     // Update only the eventType, date, and time fields
     const updatedSchedule = await schedulesModel.findByIdAndUpdate(
       id,
-      { eventType, date, time },
-      { new: true, fields: { eventType: 1, date: 1, time: 1 } } // Return only updated fields
+      { eventType, time },
+      { new: true, fields: { eventType: 1, time: 1 } }, // Return only updated fields
     );
 
     if (!updatedSchedule) {
