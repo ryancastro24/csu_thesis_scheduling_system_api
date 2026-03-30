@@ -15,6 +15,8 @@ import {
   changePassword,
   getAllRequestingUsers,
   adminAddUser,
+  getAllChairpersons,
+  getAllFaculty,
 } from "../controller/userController.js";
 
 import { v2 as cloudinary } from "cloudinary";
@@ -58,5 +60,7 @@ router.put("/approvedUser/:id", approvedUser);
 router.get("/students/data", getStudents);
 router.get("/faculty/data/:id", getfaculty);
 router.get("/getUserProfile/data/:id", getUserProfile);
+router.get("/faculty", getAllFaculty);
+router.get("/chairpersons", getAllChairpersons);
 router.get("/chairpersons/data/:id", getChairpersons);
 export default router;

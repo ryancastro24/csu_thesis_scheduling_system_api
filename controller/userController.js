@@ -262,6 +262,16 @@ export async function getfaculty(req, res) {
   }
 }
 
+export async function getAllFaculty(req, res) {
+  try {
+    const faculty = await usersModel.find({ userType: "faculty" });
+
+    res.status(200).json(faculty);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
+
 export async function getChairpersons(req, res) {
   const { id } = req.params;
   try {
@@ -275,12 +285,21 @@ export async function getChairpersons(req, res) {
     // filter out null (non-matching)
     const filtered = chairpersons.filter((f) => f.departmentId !== null);
 
-    res.status(200).json(chairpersons);
+    res.status(200).json(filtered);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 }
 
+export async function getAllChairpersons(req, res) {
+  try {
+    const chairpersons = await usersModel.find({ userType: "chairperson" });
+
+    res.status(200).json(chairpersons);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+}
 export async function updateUserProfile(req, res) {
   try {
     const { oldPassword, newPassword } = req.body;
