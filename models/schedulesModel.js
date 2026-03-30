@@ -11,9 +11,20 @@ const schedulesSchema = mongoose.Schema(
       required: true,
     },
 
+    thesisRejectStatus: {
+      type: String,
+    },
+
     eventType: {
       type: String,
       required: true,
+    },
+    eventCategory: {
+      type: String,
+    },
+    thesisApproved: {
+      type: Boolean,
+      default: false,
     },
 
     userId: {
@@ -24,7 +35,7 @@ const schedulesSchema = mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export default mongoose.model("schedules", schedulesSchema);

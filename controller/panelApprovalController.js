@@ -1,7 +1,7 @@
 import panelApprovalModel from "../models/panelApprovalModel.js";
 import adviserAcceptanaceModel from "../models/adviserAcceptanaceModel.js";
 import thesisModel from "../models/thesisModel.js";
-
+import stundentNotificationModel from "../models/stundentNotificationModel.js";
 export async function getUserApproval(req, res) {
   const { id } = req.params;
 
@@ -176,7 +176,7 @@ export async function getPanelRequests(req, res) {
 export async function updatePanelApproval(req, res) {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, remarks } = req.body;
 
     const panelApproval = await panelApprovalModel.findById(id).populate({
       path: "proposalId",
@@ -198,7 +198,7 @@ export async function updatePanelApproval(req, res) {
         panelApproval.proposalId.student1Id?._id,
         panelApproval.proposalId.student2Id?._id,
         panelApproval.proposalId.student3Id?._id,
-      ];
+      ].filter(Boolean); // remove undefined if any student missing
 
       const thesis = await thesisModel.findOne({
         students: { $all: studentIds },
@@ -225,6 +225,19 @@ export async function updatePanelApproval(req, res) {
 
         await thesis.save();
       }
+
+      // ----------------------------
+      // 🔔 Student notifications (adopted from approvedProposal)
+      // ----------------------------
+      await stundentNotificationModel.create({
+        status: panelApproval.status,
+        type: "panelApproval",
+        adviserId: panelApproval.panelId,
+        student1: panelApproval.proposalId.student1Id?._id,
+        student2: panelApproval.proposalId.student2Id?._id,
+        student3: panelApproval.proposalId.student3Id?._id,
+        remarks: remarks || "",
+      });
     } else {
       return res.status(400).json({
         message: "Invalid status value. Use 'approve' or 'reject'.",

@@ -11,7 +11,7 @@ import {
   getUserThesisModel,
   updateThesisSchedule,
   updateThesisScheduleApproval,
-  getThesisByAdviser,
+  getThesisByOralSecretary,
   updateThesisToDefended,
   getThesisDocumentById,
   getUserFinalThesisModel,
@@ -84,7 +84,7 @@ router.post(
   createFinalThesisDocument,
 );
 
-router.get("/getThesisByAdviserData/data/:adviserId", getThesisByAdviser);
+router.get("/getThesisByAdviserData/data/:adviserId", getThesisByOralSecretary);
 router.put("/thesisModel/:id/defended", updateThesisToDefended);
 router.get("/getThesisDocument/data/:id", getThesisDocumentById);
 

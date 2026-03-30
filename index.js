@@ -11,6 +11,7 @@ import favoriteRoutes from "./routes/favoritesRoutes.js";
 import notificationsRoutes from "./routes/notificationRoutes.js";
 import adviserAcceptanceRoutes from "./routes/adviserAcceptanceRoute.js";
 import panelApprovalRoutes from "./routes/panelApprovalRoutes.js";
+import studentNotificationRoutes from "./routes/studentNotificationRoutes.js";
 import cors from "cors";
 connectDB();
 
@@ -30,6 +31,7 @@ app.use("/api/favorites", favoriteRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/adviserAcceptance", adviserAcceptanceRoutes);
 app.use("/api/panelApproval", panelApprovalRoutes);
+app.use("/api/studentNotifications", studentNotificationRoutes);
 app.listen(port, () => {
   console.log(`running on port ${port}`);
 });

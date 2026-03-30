@@ -12,7 +12,7 @@ export async function getAllSchedules(req, res) {
 
 export async function createSchedule(req, res) {
   try {
-    const { date, time, eventType, userId } = req.body;
+    const { date, time, eventType, eventCategory, userId } = req.body;
 
     // 🔍 Find the user who submitted the schedule
     const creator = await usersModel.findById(userId);
@@ -23,27 +23,87 @@ export async function createSchedule(req, res) {
       });
     }
 
+    // ✅ HELPER: Convert any time string to minutes
+    const timeToMinutes = (timeStr) => {
+      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (!match) return null;
+
+      let [_, hour, minute, period] = match;
+      hour = parseInt(hour);
+      minute = parseInt(minute);
+
+      if (period) {
+        period = period.toUpperCase();
+        if (period === "PM" && hour !== 12) hour += 12;
+        if (period === "AM" && hour === 12) hour = 0;
+      }
+
+      return hour * 60 + minute;
+    };
+
+    // ✅ HELPER: Parse "9:00AM - 6:00PM" into {start, end}
+    const parseTimeRange = (timeStr) => {
+      const [start, end] = timeStr.split("-").map((t) => t.trim());
+      return { start, end };
+    };
+
+    // ✅ HELPER: Conflict checker (only checks schedules of the given user)
+    const hasConflict = async (userId) => {
+      const existingSchedules = await schedulesModel.find({
+        userId,
+        date,
+      });
+
+      const { start: newStartStr, end: newEndStr } = parseTimeRange(time);
+      const newStart = timeToMinutes(newStartStr);
+      const newEnd = timeToMinutes(newEndStr);
+
+      if (newStart === null || newEnd === null) {
+        throw new Error("Invalid time format");
+      }
+
+      return existingSchedules.some((sched) => {
+        const { start, end } = parseTimeRange(sched.time);
+
+        const existingStart = timeToMinutes(start);
+        const existingEnd = timeToMinutes(end);
+
+        if (existingStart === null || existingEnd === null) return false;
+
+        return newStart < existingEnd && newEnd > existingStart;
+      });
+    };
+
     // 🔴 ADMIN → create schedules for admin, faculty, and chairperson
     if (creator.userType === "admin") {
       const users = await usersModel.find({
         userType: { $in: ["chairperson", "faculty"] },
       });
 
+      // ✅ Only check conflict for admin's own schedule
+      if (await hasConflict(creator._id)) {
+        return res.status(200).json({
+          message: "Admin already has a schedule conflict at this time",
+        });
+      }
+
       const schedules = [
-        // ✅ Admin's own schedule
+        // Admin's own schedule
         {
           date,
           time,
           eventType,
+          eventCategory,
           userId: creator._id,
           createdBy: creator._id,
         },
 
-        // ✅ Faculty & Chairperson schedules
+        // Faculty & Chairperson schedules (no conflict check)
         ...users.map((user) => ({
           date,
           time,
           eventType,
+          eventCategory,
           userId: user._id,
           createdBy: creator._id,
         })),
@@ -58,10 +118,17 @@ export async function createSchedule(req, res) {
     }
 
     // 🟢 FACULTY / CHAIRPERSON → create schedule only for self
+    if (await hasConflict(creator._id)) {
+      return res.status(200).json({
+        message: "You already have a conflicting schedule at this time",
+      });
+    }
+
     const newSchedule = new schedulesModel({
       date,
       time,
       eventType,
+      eventCategory,
       userId: creator._id,
       createdBy: creator._id,
     });
@@ -75,7 +142,7 @@ export async function createSchedule(req, res) {
   } catch (error) {
     console.error("Create schedule error:", error);
     res.status(500).json({
-      message: "Error creating schedule",
+      message: error.message || "Error creating schedule",
       error: error.message,
     });
   }
@@ -109,7 +176,6 @@ export const generateSchedule = async (req, res) => {
     });
 
     console.log("all schedules", allSchedules);
-
     const [startDate, endDate] = dateRange
       .split(" - ")
       .map((date) => new Date(date.trim()));

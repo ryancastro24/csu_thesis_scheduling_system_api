@@ -3,7 +3,7 @@ import schedulesModel from "../models/schedulesModel.js";
 import mongoose from "mongoose";
 import Favorites from "../models/favoritesModel.js";
 import notification from "../models/notification.js";
-
+import studentNotifications from "../models/stundentNotificationModel.js";
 // 🔹 Update thesis document schedule
 export async function updateThesisSchedule(req, res) {
   try {
@@ -33,6 +33,7 @@ export async function updateThesisSchedule(req, res) {
       scheduleUsers.map((userId) => ({
         date,
         time,
+        eventCategory: "thesis",
         eventType: thesis.thesisTitle,
         userId,
       })),
@@ -327,22 +328,26 @@ export async function updatePanelApproval(req, res) {
       updateFields["reschedule"] = true;
     }
 
-    const updatedThesis = await thesisModel.findOneAndUpdate(
-      {
-        _id: thesisId,
-        "panelApprovals.panel": panelId,
-      },
-      {
-        $set: updateFields,
-      },
-      { new: true },
-    );
+    const updatedThesis = await thesisModel
+      .findOneAndUpdate(
+        {
+          _id: thesisId,
+          "panelApprovals.panel": panelId,
+        },
+        {
+          $set: updateFields,
+        },
+        { new: true },
+      )
+      .populate("students"); // ensure we can access student IDs
 
     if (!updatedThesis) {
       return res.status(404).json({ message: "Thesis or Panel not found" });
     }
 
-    // Create notification (remarks optional)
+    // ----------------------------
+    // EXISTING NOTIFICATION (UNCHANGED)
+    // ----------------------------
     const notificationData = {
       thesisId,
       userId: panelId,
@@ -355,6 +360,23 @@ export async function updatePanelApproval(req, res) {
 
     const newNotification = new notification(notificationData);
     await newNotification.save();
+
+    // ----------------------------
+    // 🔔 NEW: Student Notification (ADDED)
+    // ----------------------------
+    const students = updatedThesis.students || [];
+
+    await studentNotifications.create({
+      status,
+      type: "thesisSchedule",
+      adviserId: panelId, // sender (panel)
+      student1: students[0]?._id || students[0],
+      student2: students[1]?._id || students[1],
+      student3: students[2]?._id || students[2],
+      remarks: remarks || "",
+      read: false, // ensure unread by default
+    });
+    // ----------------------------
 
     res.status(200).json({
       message: "Panel approval updated successfully",
@@ -583,11 +605,14 @@ export async function updateThesisScheduleApproval(req, res) {
   }
 }
 
-export async function getThesisByAdviser(req, res) {
+export async function getThesisByOralSecretary(req, res) {
   try {
     const { adviserId } = req.params;
+
     const thesisDocumentsData = await thesisModel
-      .find({ adviser: adviserId })
+      .find({
+        "panels.3": new mongoose.Types.ObjectId(adviserId), // ✅ correct
+      })
       .populate("students")
       .populate("adviser")
       .populate("panels")
@@ -596,10 +621,11 @@ export async function getThesisByAdviser(req, res) {
 
     res.status(200).json(thesisDocumentsData);
   } catch (error) {
-    console.error("Error retrieving thesis documents for adviser:", error);
-    res
-      .status(500)
-      .json({ message: "Error retrieving thesis documents", error });
+    console.error("Error retrieving thesis documents for panel:", error);
+    res.status(500).json({
+      message: "Error retrieving thesis documents",
+      error,
+    });
   }
 }
 

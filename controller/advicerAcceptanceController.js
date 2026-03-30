@@ -1,5 +1,6 @@
 import adviserAcceptanaceModel from "../models/adviserAcceptanaceModel.js";
 import thesisModel from "../models/thesisModel.js";
+import stundentNotificationModel from "../models/stundentNotificationModel.js";
 
 export async function addAdviserApproval(req, res) {
   try {
@@ -98,7 +99,7 @@ export async function approvedProposal(req, res) {
   const { id } = req.params;
 
   try {
-    // 1. Update current approval
+    // 1. Update current approval (who acted)
     const updatedApproval = await adviserAcceptanaceModel.findByIdAndUpdate(
       id,
       { status, remarks },
@@ -111,7 +112,18 @@ export async function approvedProposal(req, res) {
       });
     }
 
-    // 2. Fetch adviser & co-adviser approvals
+    // 🔔 2. ALWAYS create notification for the one who acted
+    await stundentNotificationModel.create({
+      status: updatedApproval.status,
+      type: "adviserApproval",
+      adviserId: updatedApproval.adviserId || updatedApproval.coAdviserId,
+      student1: updatedApproval.student1Id,
+      student2: updatedApproval.student2Id,
+      student3: updatedApproval.student3Id,
+      remarks: updatedApproval.remarks,
+    });
+
+    // 3. Get adviser & co-adviser records
     const approvals = await adviserAcceptanaceModel.find({
       student1Id: updatedApproval.student1Id,
       proposeTitle: updatedApproval.proposeTitle,
@@ -121,50 +133,64 @@ export async function approvedProposal(req, res) {
     const adviserRecord = approvals.find((a) => a.role === "adviser");
     const coAdviserRecord = approvals.find((a) => a.role === "coAdviser");
 
-    const adviserApproved = adviserRecord?.status === "approve";
+    const adviserStatus = adviserRecord?.status;
     const coAdviserExists = !!coAdviserRecord;
-    const coAdviserApproved = coAdviserRecord?.status === "approve";
+    const coAdviserStatus = coAdviserRecord?.status;
 
-    // 3. Adviser required, co-adviser optional
-    const canCreateThesis =
-      adviserApproved && (!coAdviserExists || coAdviserApproved);
+    // 🧠 Flags
+    const adviserRejected = adviserStatus === "reject";
+    const coAdviserRejected = coAdviserExists && coAdviserStatus === "reject";
 
-    if (canCreateThesis) {
-      const existingThesis = await thesisModel.findOne({
-        thesisTitle: updatedApproval.proposeTitle,
-        students: updatedApproval.student1Id,
-      });
+    const adviserApproved = adviserStatus === "approve";
+    const coAdviserApproved = !coAdviserExists || coAdviserStatus === "approve";
 
-      if (!existingThesis) {
-        const thesisModelData = await thesisModel.create({
-          students: [
-            adviserRecord.student1Id,
-            adviserRecord.student2Id,
-            adviserRecord.student3Id,
-          ].filter(Boolean),
-          thesisTitle: adviserRecord.proposeTitle,
-          adviser: adviserRecord.adviserId,
-          coAdviser: adviserRecord.coAdviserId || null,
-          type: "proposal",
-        });
+    const isFullyApproved = adviserApproved && coAdviserApproved;
+    const isAnyRejected = adviserRejected || coAdviserRejected;
 
-        return res.status(200).json({
-          message: "Thesis created successfully.",
-          thesisModelData,
-        });
-      }
-
+    // ❌ CASE: Any rejection → stop
+    if (isAnyRejected) {
       return res.status(200).json({
-        message: "Thesis already exists.",
+        message: "Proposal rejected.",
       });
     }
 
-    // 4. Waiting for required approvals
+    // ⏳ CASE: Still waiting
+    if (!isFullyApproved) {
+      return res.status(200).json({
+        message: coAdviserExists
+          ? "Waiting for all approvals."
+          : "Waiting for adviser approval.",
+        updatedApproval,
+      });
+    }
+
+    // ✅ CASE: Fully approved → create thesis
+    const existingThesis = await thesisModel.findOne({
+      thesisTitle: updatedApproval.proposeTitle,
+      students: updatedApproval.student1Id,
+    });
+
+    if (!existingThesis) {
+      const thesisModelData = await thesisModel.create({
+        students: [
+          adviserRecord.student1Id,
+          adviserRecord.student2Id,
+          adviserRecord.student3Id,
+        ].filter(Boolean),
+        thesisTitle: adviserRecord.proposeTitle,
+        adviser: adviserRecord.adviserId,
+        coAdviser: adviserRecord.coAdviserId || null,
+        type: "proposal",
+      });
+
+      return res.status(200).json({
+        message: "Thesis created successfully.",
+        thesisModelData,
+      });
+    }
+
     return res.status(200).json({
-      message: coAdviserExists
-        ? "Waiting for other approval."
-        : "Waiting for adviser approval.",
-      updatedApproval,
+      message: "Thesis already exists.",
     });
   } catch (error) {
     console.error("Error approving proposal:", error);

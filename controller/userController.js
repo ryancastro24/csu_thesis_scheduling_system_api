@@ -32,13 +32,13 @@ export async function getAllRequestingUsers(req, res) {
 // add new user
 export async function addUser(req, res) {
   try {
-    const { username, email, password } = req.body;
+    const { id_number, email, password } = req.body;
 
     if (!password) {
       return res.status(400).json({ error: "Password is required" });
     }
 
-    const userExist = await usersModel.findOne({ username });
+    const userExist = await usersModel.findOne({ id_number });
     const emailExist = await usersModel.findOne({ email });
 
     if (userExist) {
@@ -55,6 +55,45 @@ export async function addUser(req, res) {
     const newUser = await usersModel.create({
       ...req.body,
       password: hashedPassword,
+      username: id_number,
+      userType: "student",
+    });
+
+    return res.status(201).json({
+      message: "User added successfully",
+      userId: newUser._id,
+      username: id_number,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Error adding user", error: error.message });
+  }
+}
+
+export async function adminAddUser(req, res) {
+  try {
+    const { email, id_number } = req.body;
+
+    const userExist = await usersModel.findOne({ id_number });
+    const emailExist = await usersModel.findOne({ email });
+
+    if (userExist) {
+      return res.status(200).json({ message: "User already exists" });
+    }
+
+    if (emailExist) {
+      return res.status(200).json({ message: "Email already exists!" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash("user123", salt);
+
+    const newUser = await usersModel.create({
+      ...req.body,
+      password: hashedPassword,
+      approved: true,
+      username: id_number,
     });
 
     return res.status(201).json({
@@ -67,7 +106,6 @@ export async function addUser(req, res) {
       .json({ message: "Error adding user", error: error.message });
   }
 }
-
 // delete user
 export async function deleteUser(req, res) {
   try {
@@ -100,7 +138,7 @@ export async function updateUser(req, res) {
     const updatedUser = await usersModel.findByIdAndUpdate(
       id,
       { $set: updates },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updatedUser) {
@@ -120,7 +158,7 @@ export async function approvedUser(req, res) {
     const updatedUser = await usersModel.findByIdAndUpdate(
       id,
       { $set: { approved: true } },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updatedUser) {
@@ -170,7 +208,7 @@ export async function getStudents(req, res) {
     // Step 1: Get all adviserAcceptance records
     const adviserAcceptances = await adviserAcceptanaceModel.find(
       {},
-      "student1Id student2Id student3Id status"
+      "student1Id student2Id student3Id status",
     );
 
     // Collect student IDs grouped by status
@@ -206,20 +244,36 @@ export async function getStudents(req, res) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 }
-
 export async function getfaculty(req, res) {
-  try {
-    const faculty = await usersModel.find({ userType: "faculty" });
+  const { id } = req.params;
 
-    res.status(200).json(faculty);
+  try {
+    const faculty = await usersModel.find({ userType: "faculty" }).populate({
+      path: "departmentId",
+      match: { acronym: id },
+    });
+
+    // filter out null (non-matching)
+    const filtered = faculty.filter((f) => f.departmentId !== null);
+
+    res.status(200).json(filtered);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 }
 
 export async function getChairpersons(req, res) {
+  const { id } = req.params;
   try {
-    const chairpersons = await usersModel.find({ userType: "chairperson" });
+    const chairpersons = await usersModel
+      .find({ userType: "chairperson" })
+      .populate({
+        path: "departmentId",
+        match: { acronym: id },
+      });
+
+    // filter out null (non-matching)
+    const filtered = chairpersons.filter((f) => f.departmentId !== null);
 
     res.status(200).json(chairpersons);
   } catch (error) {
@@ -262,7 +316,7 @@ export async function updateUserProfile(req, res) {
       const updatedUser = await usersModel.findByIdAndUpdate(
         userId,
         updateData,
-        { new: true }
+        { new: true },
       );
 
       return res.status(200).json({
@@ -276,7 +330,7 @@ export async function updateUserProfile(req, res) {
         {
           profilePicture: req.file.path,
         },
-        { new: true }
+        { new: true },
       );
 
       return res.status(200).json({
